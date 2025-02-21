@@ -1,8 +1,10 @@
 GIXY
 ====
-[![Mozilla Public License 2.0](https://img.shields.io/github/license/dvershinin/gixy.svg?style=flat-square)](https://github.com/dvershinin/gixy/blob/master/LICENSE)
+
+
+[![Mozilla Public License 2.0](https://img.shields.io/badge/license-MPLv2.0-brightgreen?style=flat-square)](https://github.com/dvershinin/gixy/blob/master/LICENSE)
 [![Python tests](https://github.com/dvershinin/gixy/actions/workflows/pythonpackage.yml/badge.svg)](https://github.com/dvershinin/gixy/actions/workflows/pythonpackage.yml)
-[![Your feedback is greatly appreciated](https://img.shields.io/maintenance/yes/2023.svg?style=flat-square)](https://github.com/dvershinin/gixy/issues/new)
+[![Your feedback is greatly appreciated](https://img.shields.io/maintenance/yes/2025.svg?style=flat-square)](https://github.com/dvershinin/gixy/issues/new)
 [![GitHub issues](https://img.shields.io/github/issues/dvershinin/gixy.svg?style=flat-square)](https://github.com/dvershinin/gixy/issues)
 [![GitHub pull requests](https://img.shields.io/github/issues-pr/dvershinin/gixy.svg?style=flat-square)](https://github.com/dvershinin/gixy/pulls)
 
@@ -12,7 +14,7 @@ GIXY
 # Overview
 <img align="right" width="192" height="192" src="docs/gixy.png">
 
-Gixy is a tool to analyze Nginx configuration.
+Gixy is a tool to analyze NGINX configuration.
 The main goal of Gixy is to prevent security misconfiguration and automate flaw detection.
 
 Currently supported Python versions are 3.6 through 3.13.
@@ -75,7 +77,7 @@ $ gixy /etc/nginx/nginx.conf
 
 Problem: [http_splitting] Possible HTTP-Splitting vulnerability.
 Description: Using variables that can contain "\n" may lead to http injection.
-Additional info: https://github.com/dvershinin/gixy/blob/master/docs/ru/plugins/httpsplitting.md
+Additional info: https://github.com/dvershinin/gixy/blob/master/docs/en/plugins/httpsplitting.md
 Reason: At least variable "$action" can contain "\n"
 Pseudo config:
 include /etc/nginx/sites/default.conf;
