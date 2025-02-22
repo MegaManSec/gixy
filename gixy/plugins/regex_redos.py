@@ -39,7 +39,7 @@ class regex_redos(Plugin):
         'allow an nginx server to be denial-of-service attacked with very low '
         'resources (also known as ReDoS).'
     )
-    help_url = 'https://joshua.hu/nginx-directives-regex-redos-denial-of-service-vulnerable'
+    help_url = 'https://joshua.hu/regex-redos-nginx-gixy'
     directives = ['location']  # XXX: server_name, rewrite, if, map, proxy_redirect
     options = {
         'url': ""
