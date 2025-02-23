@@ -61,11 +61,14 @@ class regex_redos(Plugin):
         regex_pattern = directive.path
         fail_reason = f'Could not check regex {regex_pattern} for ReDoS.'
 
+        modifier = "" if directive.modifier == "~" else "i"
+        json_data = {"1": {"pattern": regex_pattern, "modifier": modifier}}
+
         # Attempt to contact the ReDoS check server.
         try:
             response = requests.post(
                 self.redos_server,
-                json={"1": regex_pattern},
+                json=json_data,
                 headers={"Content-Type": "application/json"},
                 timeout=60
             )
