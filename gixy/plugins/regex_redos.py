@@ -20,7 +20,7 @@ class regex_redos(Plugin):
     This plugin relies on an external, public API to determine vulnerability.
     Because of this network-dependence, and the fact that potentially private
     expressions are sent over the network, usage of this plugin requires
-    the --redos-checks-url flag. This flag must specify the full URL to a
+    the --regex-redos-url flag. This flag must specify the full URL to a
     service which can be queried with expressions, responding with a report
     matching the https://github.com/makenowjust-labs/recheck format.
 
@@ -33,7 +33,7 @@ class regex_redos(Plugin):
         'Regular Expression Denial of Service (ReDoS).'
     )
     severity = gixy.severity.HIGH
-    unknown_severity = gixy.severity.LOW
+    unknown_severity = gixy.severity.UNSPECIFIED
     description = (
         'Regular expressions with the potential for catastrophic backtracking '
         'allow an nginx server to be denial-of-service attacked with very low '
@@ -59,6 +59,7 @@ class regex_redos(Plugin):
             return
 
         regex_pattern = directive.path
+        fail_reason = f'Could not check regex {regex_pattern} for ReDoS.'
 
         # Attempt to contact the ReDoS check server.
         try:
@@ -69,36 +70,39 @@ class regex_redos(Plugin):
                 timeout=60
             )
         except requests.RequestException:
+            self.add_issue(directive=directive, reason=fail_reason, severity=self.unknown_severity)
             return
 
         # If we get a non-200 response, skip.
         if response.status_code != 200:
+            self.add_issue(directive=directive, reason=fail_reason, severity=self.unknown_severity)
             return
 
         # Attempt to parse the JSON response.
         try:
             response_json = response.json()
         except ValueError:
-            reason = f'Could not check regex {regex_pattern} for ReDoS.'
-            self.add_issue(directive=directive, reason=reason, severity=self.unknown_severity)
+            self.add_issue(directive=directive, reason=fail_reason, severity=self.unknown_severity)
             return
 
         # Ensure the expected data structure is present and matches the pattern.
         if (
             "1" not in response_json or
             response_json["1"] is None or
+            "source" not in response_json or
             response_json["1"]["source"] != regex_pattern
         ):
+            self.add_issue(directive=directive, reason=fail_reason, severity=self.unknown_severity)
             return
 
         recheck = response_json["1"]
         status = recheck.get("status")
 
-        # If status is neither 'vulnerable' nor 'unknown', skip.
+        # If status is neither 'vulnerable' nor 'unknown', the expression is safe.
         if status not in ("vulnerable", "unknown"):
             return
 
-        # If the status is unknown, add a low-severity issue.
+        # If the status is unknown, add a low-severity issue (likely the server timed out)
         if status == "unknown":
             reason = f'Could not check complexity of regex {regex_pattern}.'
             self.add_issue(directive=directive, reason=reason, severity=self.unknown_severity)
