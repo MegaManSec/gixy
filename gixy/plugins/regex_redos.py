@@ -92,7 +92,7 @@ class regex_redos(Plugin):
         if (
             "1" not in response_json or
             response_json["1"] is None or
-            "source" not in response_json or
+            "source" not in response_json["1"] or
             response_json["1"]["source"] != regex_pattern
         ):
             self.add_issue(directive=directive, reason=fail_reason, severity=self.unknown_severity)
