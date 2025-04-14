@@ -8,7 +8,8 @@ except ImportError:
 
 from pyparsing import (
     Literal, Suppress, White, Word, alphanums, Forward, Group, Optional, Combine,
-    Keyword, OneOrMore, ZeroOrMore, Regex, QuotedString, nestedExpr, ParseResults)
+    Keyword, OneOrMore, ZeroOrMore, Regex, QuotedString, nestedExpr, ParseResults,
+    lineno, col, ParseException)
 
 LOG = logging.getLogger(__name__)
 
@@ -102,7 +103,7 @@ class RawParser(object):
 
         comment = (
             Regex(r"#.*")
-        )("comment").setParseAction(_fix_comment)
+        )("comment")
 
         hash_value = Group(
             value +
@@ -174,6 +175,17 @@ class RawParser(object):
             nestedExpr(opener="{", closer="}")
         )("unparsed_block")
 
+        if_block.setParseAction(attach_line_number)
+        location_block.setParseAction(attach_line_number)
+        hash_block.setParseAction(attach_line_number)
+        generic_block.setParseAction(attach_line_number)
+        directive.setParseAction(attach_line_number)
+        include.setParseAction(attach_line_number)
+        file_delimiter.setParseAction(attach_line_number)
+        hash_value.setParseAction(attach_line_number)
+        unparsed_block.setParseAction(attach_line_number, detect_problematic_line)
+        comment.setParseAction(attach_line_number, _fix_comment)
+
         return sub_block
 
 
@@ -189,3 +201,57 @@ def _fix_comment(string, location, tokens):
 
     comment = tokens[0][1:].strip()
     return [comment]
+
+def attach_line_number(s, loc, tokens):
+    """
+    Attach line and column information to parsed blocks.
+
+    :param s: the original text being parsed
+    :param loc: the location where the match started
+    :param tokens: the tokens matched
+    """
+    tokens['line'] = lineno(loc, s)
+    tokens['col'] = col(loc, s)
+    return tokens
+
+def flatten_tokens(tokens_list):
+    parts = []
+    for tok in tokens_list:
+        if isinstance(tok, list):
+            parts.append('{')
+            parts.append(flatten_tokens(tok))
+            parts.append('}')
+        else:
+            parts.append(str(tok))
+    return ' '.join(parts)
+
+def detect_problematic_line(s, loc, tokens):
+    if len(tokens) < 3:
+        return tokens  # not enough content to reparse
+
+    block_content = flatten_tokens(tokens[2])
+    line_num = lineno(loc, s)
+    col_num = col(loc, s)
+    try:
+        # Try to reparse the flattened block
+        _ = RawParser().script.parseString(block_content, parseAll=True)
+    except ParseException as e:
+        error_line_num = e.lineno
+        error_col = e.col
+
+        block_lines = block_content.splitlines()
+
+        if 0 < error_line_num <= len(block_lines):
+            broken_line = block_lines[error_line_num - 1]
+            start_pos = error_col
+            snippet = broken_line[start_pos : start_pos + 50].replace("', '", " ") # Replace ', ' due to flattened list(horrible hack)
+
+            LOG.warning(
+                "Detected unparsable content inside block beginning at line %d: '%s'.",
+                line_num, snippet
+            )
+        else:
+            LOG.warning(
+                "Detected unparsable content inside block at unknown position."
+            )
+    return tokens
