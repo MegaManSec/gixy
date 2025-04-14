@@ -54,54 +54,60 @@ class NginxParser(object):
             self.cwd = os.path.dirname(root_filename)
             parsed = self.configs[root_filename]
 
-        self.parse_block(parsed, root)
+        self.parse_block(parsed, root, path_info)
+        self.current_path = None
         return root
 
-    def parse_block(self, parsed_block, parent):
+    def parse_block(self, parsed_block, parent, filename):
         for parsed in parsed_block:
             parsed_type = parsed.getName()
-            parsed_name = parsed[0]
+            name = parsed[0]
+            line = parsed.get('line', None)
+            parsed_name = {name: line}
             parsed_args = parsed[1:]
             if parsed_type == "include":
                 # TODO: WTF?!
                 self._resolve_include(parsed_args, parent)
             else:
                 directive_inst = self.directive_factory(
-                    parsed_type, parsed_name, parsed_args
+                    parsed_type, parsed_name, parsed_args, filename
                 )
                 if directive_inst:
                     parent.append(directive_inst)
 
-    def directive_factory(self, parsed_type, parsed_name, parsed_args):
-        klass = self._get_directive_class(parsed_type, parsed_name)
+    def directive_factory(self, parsed_type, parsed_name, parsed_args, filename):
+        klass = self._get_directive_class(parsed_type, parsed_name, filename)
         if not klass:
             return None
 
         if klass.is_block:
+            name = list(parsed_name.keys())[0]
             args = [to_native(v).strip() for v in parsed_args[0]]
             children = parsed_args[1]
 
             inst = klass(parsed_name, args)
-            self.parse_block(children, inst)
+            self.parse_block(children, inst, filename)
             return inst
         else:
+            name = list(parsed_name.keys())[0]
             args = [to_native(v).strip() for v in parsed_args]
-            return klass(parsed_name, args)
+            return klass(name, args)
 
-    def _get_directive_class(self, parsed_type, parsed_name):
+    def _get_directive_class(self, parsed_type, parsed_name, filename):
+        name = list(parsed_name.keys())[0]
+        line = parsed_name.get(name, '<unknown>')
+
         if (
             parsed_type in self.directives
-            and parsed_name in self.directives[parsed_type]
+            and name in self.directives[parsed_type]
         ):
-            return self.directives[parsed_type][parsed_name]
+            return self.directives[parsed_type][name]
         elif parsed_type == "block":
             return block.Block
         elif parsed_type == "directive":
             return directive.Directive
         elif parsed_type == "unparsed_block":
-            LOG.warning('Skip unparseable block: "%s"', parsed_name)
-            return None
-        else:
+            LOG.warning('Skip unparseable block in %s beginning at line %s: "%s"', filename, line, name)
             return None
 
     def _init_directives(self):
@@ -114,7 +120,7 @@ class NginxParser(object):
         if self.is_dump:
             return self._resolve_dump_include(pattern=pattern, parent=parent)
         if not self.allow_includes:
-            LOG.debug("Includes are disallowed, skip: {0}".format(pattern))
+            LOG.debug("Includes are disallowed in {0}, skip: {1}".format(filename, pattern))
             return
 
         return self._resolve_file_include(pattern=pattern, parent=parent)
@@ -130,7 +136,11 @@ class NginxParser(object):
             self.parse_file(file_path, parent)
 
         if not exists:
-            LOG.warning("File not found: {0}".format(path))
+            filename = getattr(self, 'current_path', '<unknown>')
+            LOG.warning(
+                'Included file not found in %s: pattern "%s" resolved to "%s"',
+                filename, pattern, path
+            )
 
     def _resolve_dump_include(self, pattern, parent):
         path = os.path.join(self.cwd, pattern)
@@ -140,10 +150,14 @@ class NginxParser(object):
                 founded = True
                 include = block.IncludeBlock("include", [file_path])
                 parent.append(include)
-                self.parse_block(parsed, include)
+                self.parse_block(parsed, include, file_path)
 
         if not founded:
-            LOG.warning("File not found: {0}".format(path))
+            filename = getattr(self, 'current_path', '<unknown>')
+            LOG.warning(
+                'Included dump file not found in %s: pattern "%s" resolved to "%s"',
+                filename, pattern, path
+            )
 
     def _prepare_dump(self, parsed_block):
         filename = ""
