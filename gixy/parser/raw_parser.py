@@ -124,6 +124,7 @@ class RawParser(object):
                                     directive |
                                     file_delimiter |
                                     comment |
+                                    hash_value |
                                     unparsed_block))
 
         if_block << (
