@@ -57,7 +57,7 @@ class RawParser(object):
         keyword = Word(alphanums + ".+-_/")
         path = Word(alphanums + ".-_/")
         variable = Word("$_-" + alphanums)
-        value_wq = Regex(r'(?:\([^\s;]*\)|\$\{\w+\}|[^\s;(){}])+')
+        value_wq = Regex(r'(?:\([^\s;]*\)|\$\{\w+\}|\\[(){};\s]|[^\s;{}])+')
         value_sq = NginxQuotedString(quoteChar="'")
         value_dq = NginxQuotedString(quoteChar='"')
         value = (value_dq | value_sq | value_wq)
