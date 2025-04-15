@@ -1,7 +1,5 @@
 GIXY
 ====
-
-
 [![Mozilla Public License 2.0](https://img.shields.io/badge/license-MPLv2.0-brightgreen?style=flat-square)](https://github.com/dvershinin/gixy/blob/master/LICENSE)
 [![Python tests](https://github.com/dvershinin/gixy/actions/workflows/pythonpackage.yml/badge.svg)](https://github.com/dvershinin/gixy/actions/workflows/pythonpackage.yml)
 [![Your feedback is greatly appreciated](https://img.shields.io/maintenance/yes/2025.svg?style=flat-square)](https://github.com/dvershinin/gixy/issues/new)
@@ -44,6 +42,7 @@ Right now Gixy can find:
 *   [[error_log_off] `error_log` set to `off`](https://gixy.getpagespeed.com/en/plugins/error_log_off/)
 *   [[unanchored_regex] Regular expression without anchors](https://gixy.getpagespeed.com/en/plugins/unanchored_regex/)
 *   [[regex_redos] Regular expressions may result in easy denial-of-service (ReDoS) attacks](https://joshua.hu/regex-redos-recheck-nginx-gixy)
+*   [[low_keepalive_requests] `keepalive_requests` below 1000](https://joshua.hu/http2-burp-proxy-mitmproxy-nginx-failing-load-resources-chromium#nginx-keepalive_requests)
 
 You can find things that Gixy is learning to detect at [Issues labeled with "new plugin"](https://github.com/dvershinin/gixy/issues?q=is%3Aissue+is%3Aopen+label%3A%22new+plugin%22)
 
