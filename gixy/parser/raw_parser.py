@@ -8,7 +8,8 @@ except ImportError:
 
 from pyparsing import (
     Literal, Suppress, White, Word, alphanums, Forward, Group, Optional, Combine,
-    Keyword, OneOrMore, ZeroOrMore, Regex, QuotedString, nestedExpr, ParseResults)
+    Keyword, OneOrMore, ZeroOrMore, Regex, QuotedString, nestedExpr, ParseResults,
+    oneOf)
 
 LOG = logging.getLogger(__name__)
 
@@ -56,6 +57,7 @@ class RawParser(object):
         keyword = Word(alphanums + ".+-_/")
         path = Word(alphanums + ".-_/")
         variable = Word("$_-" + alphanums)
+        known_hash_blocks = oneOf("map types geo charset")
         value_wq = Regex(r'(?:\([^\s;]*\)|\$\{\w+\}|[^\s;(){}])+')
         value_sq = NginxQuotedString(quoteChar="'")
         value_dq = NginxQuotedString(quoteChar='"')
@@ -149,7 +151,7 @@ class RawParser(object):
         )("block")
 
         hash_block << (
-            keyword +
+            known_hash_blocks +
             Group(OneOrMore(space + value)) +
             Group(
                 left_bracket +
