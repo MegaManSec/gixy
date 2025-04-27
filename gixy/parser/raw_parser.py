@@ -231,7 +231,7 @@ def detect_problematic_line(s, loc, tokens):
 
     block_content = flatten_tokens(tokens[2])
     line_num = lineno(loc, s)
-    col_num = col(loc, s)
+    # col_num = col(loc, s)
     try:
         # Try to reparse the flattened block
         _ = RawParser().script.parseString(block_content, parseAll=True)
