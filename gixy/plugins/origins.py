@@ -52,8 +52,12 @@ class origins(Plugin):
         for value in regexp.generate('/', anchored=True):
             if value.startswith('^'):
                 value = value[1:]
-            else:
+            elif directive.variable != '$http_origin':
                 value = 'http://evil.com/' + value
+
+            if directive.variable == '$http_origin':
+                if value[-1] in ['$', '/']:
+                    continue
 
             if value.endswith('$'):
                 value = value[:-1]
@@ -61,6 +65,9 @@ class origins(Plugin):
                 value += '.evil.com'
 
             valid = self.valid_re.match(value)
+
+            if directive.variable == '$http_origin' and valid and valid.group(0).count(":") > 1:
+                continue
             if not valid or valid.group('domain') == 'evil.com':
                 invalid_referers.add(value)
 
