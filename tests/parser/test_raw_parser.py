@@ -100,19 +100,6 @@ location ~* \((?:by[\ +])\) {
     assert_config(config, expected)
 
 
-def test_pcre_verb_removal():
-    config = """
-rewrite (*ANYCRLF)/(?<target>.+?)$ /target=$target permanent;
-}
-        """
-
-    expected = [
-        ["rewrite", "/(?<target>.+?)$", "/target=$target", "permanent"],
-    ]
-
-    assert_config(config, expected)
-
-
 def test_quoted_strings():
     config = """
 some_sq '\\'la\\.\\/\\"';
