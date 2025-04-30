@@ -29,16 +29,19 @@ class origins(Plugin):
         super(origins, self).__init__(config)
         if self.config.get('domains') and self.config.get('domains')[0] and self.config.get('domains')[0] != '*':
             domains = '|'.join(re.escape(d) for d in self.config.get('domains'))
-        else:
-            domains = r'[^/.]*\.?[^/]{2,7}'
 
-        scheme = 'https{http}'.format(http=('?' if not self.config.get('https_only') else ''))
-        regex = r'^{scheme}://(?:[^/.]*\.){{0,10}}(?P<domain>{domains})(?::\d*)?(?:/|\?|$)'.format(
-            scheme=scheme,
-            domains=domains
-        )
         self.https_only = True if self.config.get('https_only') else False
-        self.valid_re = re.compile(regex)
+
+    def extract_url(self, url):
+        extracted_url = urlparse(url)
+        fixed_url = urljoin(f'{extracted_url.scheme}://{extracted_url.netloc}', extracted_url.path) # path cannot have multiple `//`, or `..`.
+        fixed_parsed = urlparse(fixed_url)
+        return extracted_url._replace(path=fixed_parsed.path)
+
+    def check_diff_url(self, url1, url2):
+        extracted_url1 = urlparse(url)
+        extracted_url2 = urlparse(url)
+        return extracted_url1.netloc == extracted_url2.netloc
 
     def audit(self, directive):
         if directive.operand not in ['~', '~*', '!~', '!~*']:
@@ -52,8 +55,10 @@ class origins(Plugin):
         invalid_referers = set()
         invalid_origins = set()
         regexp = Regexp(directive.value, case_sensitive=(directive.operand in ['~', '!~']))
-        for value in regexp.generate('a', anchored=True):
+        for value in regexp.generate('/', anchored=True):
             extracted_domain = value
+
+            print(extracted_domain, directive.value)
 
             start_anchor = end_anchor = False
             if extracted_domain.startswith('^'):
@@ -64,15 +69,29 @@ class origins(Plugin):
                 extracted_domain = extracted_domain[:-1]
 
             try:
-                extracted_url = urlparse(extracted_domain)
-                fixed_url = urljoin(f'{extracted_url.scheme}://{extracted_url.netloc}', extracted_url.path) # path cannot have multiple `//`, or `..`.
-                fixed_parsed = urlparse(fixed_url)
-                extracted_url = extracted_url._replace(path=fixed_parsed.path)
+                extracted_url = self.extract_url(extracted_domain)
             except ValueError:
                 continue
             print(start_anchor, end_anchor, extracted_url)
             if extracted_url.netloc == '':
-                continue # XXX: Invalid host
+                # google.com
+                # google.com/something
+                # ^google.com
+                # ^google.com/something
+                # google.com$
+                # google.com/something$
+                # ^google.com$
+                # ^google.com/something$
+                if directive.variable == '$http_origin':
+                    severity = gixy.severity.HIGH
+                    reason = f'Regex matches incomplete string "{extracted_domain}"'
+                    self.add_issue(directive=directive, reason=reason, severity=severity)
+                else:
+                    severity = gixy.severity.MEDIUM
+                    reason = f'Regex matches incomplete string "{extracted_domain}"'
+                    self.add_issue(directive=directive, reason=reason, severity=severity)
+
+                return
 
             if self.https_only and extracted_url.scheme != 'https':
                 continue # XXX: Missing https
@@ -87,6 +106,7 @@ class origins(Plugin):
                         # ^https://google.com
                         invalid_origins.add(f'{extracted_url.scheme}://{extracted_url.netloc}.evil.com')
                     else:
+                        # XXX: Need to handle ^https://gogle.comasdasd.com$ somehow....?
                         # ^https://google.com$
                         pass
                 else:
@@ -95,6 +115,7 @@ class origins(Plugin):
                         invalid_origins.add(f'{extracted_url.scheme}://{extracted_url.netloc}.evil.com')
                     else:
                         pass
+                        # XXX: Need to handle ^https://gogle.comasdasd.com$ somehow....?
                         # https://google.com$
             elif directive.variable == '$http_referer':
                 reparsed_url = urlunparse(extracted_url)
@@ -107,6 +128,7 @@ class origins(Plugin):
                     else:
                         # ^https://google.com/something$
                         # ^https://google.com$
+                        # XXX: Need to handle ^https://gogle.comasdasd.com$ somehow....? Try to add `evil.com` at end and see if reparsed_url still matches the regex?
                         pass
                 else:
                     if not end_anchor:
