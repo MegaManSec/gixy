@@ -3,6 +3,7 @@ import logging
 import gixy
 from gixy.plugins.plugin import Plugin
 from gixy.core.regexp import Regexp
+from urllib.parse import urlunparse, urlparse, urljoin
 
 LOG = logging.getLogger(__name__)
 
@@ -29,13 +30,14 @@ class origins(Plugin):
         if self.config.get('domains') and self.config.get('domains')[0] and self.config.get('domains')[0] != '*':
             domains = '|'.join(re.escape(d) for d in self.config.get('domains'))
         else:
-            domains = r'[^/.]*\.[^/]{2,7}'
+            domains = r'[^/.]*\.?[^/]{2,7}'
 
         scheme = 'https{http}'.format(http=('?' if not self.config.get('https_only') else ''))
         regex = r'^{scheme}://(?:[^/.]*\.){{0,10}}(?P<domain>{domains})(?::\d*)?(?:/|\?|$)'.format(
             scheme=scheme,
             domains=domains
         )
+        self.https_only = True if self.config.get('https_only') else False
         self.valid_re = re.compile(regex)
 
     def audit(self, directive):
@@ -48,32 +50,92 @@ class origins(Plugin):
             return
 
         invalid_referers = set()
+        invalid_origins = set()
         regexp = Regexp(directive.value, case_sensitive=(directive.operand in ['~', '!~']))
-        for value in regexp.generate('/', anchored=True):
-            if value.startswith('^'):
-                value = value[1:]
-            elif directive.variable != '$http_origin':
-                value = 'http://evil.com/' + value
+        for value in regexp.generate('a', anchored=True):
+            extracted_domain = value
 
-            if directive.variable == '$http_origin':
-                if value[-1] in ['$', '/']:
-                    continue
+            start_anchor = end_anchor = False
+            if extracted_domain.startswith('^'):
+                start_anchor = True
+                extracted_domain = extracted_domain[1:]
+            if extracted_domain.endswith('$'):
+                end_anchor = True
+                extracted_domain = extracted_domain[:-1]
 
-            if value.endswith('$'):
-                value = value[:-1]
-            elif not value.endswith('/'):
-                value += '.evil.com'
-
-            valid = self.valid_re.match(value)
-
-            if directive.variable == '$http_origin' and valid and valid.group(0).count(":") > 1:
+            try:
+                extracted_url = urlparse(extracted_domain)
+                fixed_url = urljoin(f'{extracted_url.scheme}://{extracted_url.netloc}', extracted_url.path) # path cannot have multiple `//`, or `..`.
+                fixed_parsed = urlparse(fixed_url)
+                extracted_url = extracted_url._replace(path=fixed_parsed.path)
+            except ValueError:
                 continue
-            if not valid or valid.group('domain') == 'evil.com':
-                invalid_referers.add(value)
+            print(start_anchor, end_anchor, extracted_url)
+            if extracted_url.netloc == '':
+                continue # XXX: Invalid host
 
-        if invalid_referers:
-            invalid_referers = '", "'.join(invalid_referers)
-            name = 'origin' if directive.variable == '$http_origin' else 'referrer'
-            severity = gixy.severity.HIGH if directive.variable == '$http_origin' else gixy.severity.MEDIUM
-            reason = 'Regex matches "{value}" as a valid {name}.'.format(value=invalid_referers, name=name)
+            if self.https_only and extracted_url.scheme != 'https':
+                continue # XXX: Missing https
+            elif extracted_url.scheme != 'http' and extracted_url.scheme != 'https':
+                continue # XXX: Invalid scheme
+            if directive.variable == '$http_origin':
+                if extracted_url.path != '':
+                    continue # XXX: Must be empty path
+
+                if start_anchor:
+                    if not end_anchor:
+                        # ^https://google.com
+                        invalid_origins.add(f'{extracted_url.scheme}://{extracted_url.netloc}.evil.com')
+                    else:
+                        # ^https://google.com$
+                        pass
+                else:
+                    if not end_anchor:
+                        # https://google.com
+                        invalid_origins.add(f'{extracted_url.scheme}://{extracted_url.netloc}.evil.com')
+                    else:
+                        pass
+                        # https://google.com$
+            elif directive.variable == '$http_referer':
+                reparsed_url = urlunparse(extracted_url)
+                if start_anchor:
+                    if not end_anchor:
+                        # ^https://google.com/something <- not vuln
+                        # ^https://google.com <- vuln
+                        if extracted_url.path == '':
+                            invalid_referers.add(reparsed_url + '.evil.com')
+                    else:
+                        # ^https://google.com/something$
+                        # ^https://google.com$
+                        pass
+                else:
+                    if not end_anchor:
+                        # https://google.com
+                        # https://google.com/something
+                        if extracted_url.path == '':
+                            invalid_referers.add(reparsed_url + '.evil.com')
+                        else:
+                            invalid_referers.add('http://evil.com/?' + reparsed_url)
+                    else:
+                        # https://google.com$
+                        # https://google.com/something$
+                        invalid_referers.add('http://evil.com/?' + reparsed_url)
+
+
+        if invalid_referers or invalid_origins:
+            if directive.variable == '$http_origin':
+                name = 'origin'
+                invalids = '", "'.join(invalid_origins)
+            else:
+                name = 'referrer'
+                invalids = '", "'.join(invalid_referers)
+            severity = gixy.severity.HIGH if name == 'origin' else gixy.severity.MEDIUM
+            reason = 'Regex matches "{value}" as a valid {name}.'.format(value=invalids, name=name)
             self.add_issue(directive=directive, reason=reason, severity=severity)
+
+
+
+
+
+
+
