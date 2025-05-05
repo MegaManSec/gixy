@@ -9,13 +9,36 @@ _PSL = PublicSuffixList()
 
 class origins(Plugin):
     r"""
-    Insecure example:
-        if ($http_referer !~ "^https?://([^/])+metrika.*yandex\.ru/"){
+    Insecure examples:
+        # Insecure referer, allows https://metrika-hacked-yandex.ru/
+        if ($http_referer !~ "^https://([^/])+metrika.*yandex\.ru/") {
+            add_header X-Frame-Options SAMEORIGIN;
+        }
+        # Invalid header, origin cannot contain a path
+        if ($http_origin !~ "^https://yandex\.ru/$") {
+            add_header X-Frame-Options SAMEORIGIN;
+        }
+        # Invalid (and insecure) header, 'referrer' is the wrong spelling.
+        if ($http_referrer !~ "^https://yandex\.ru/") {
+            add_header X-Frame-Options SAMEORIGIN;
+        }
+        # Insecure origin header, allows https://sub-yandex.ru
+        if ($http_origin !~ "^https://sub.yandex.ru$") {
+            add_header X-Frame-Options SAMEORIGIN;
+        }
+        # Insecure origin header, allows http://sub.yandex.ru (when using --origins-https-only True)
+        if ($http_origin !~ "^https?://sub\.yandex\.ru$") {
+            add_header X-Frame-Options SAMEORIGIN;
+        }
+        # Insecure origin header, allows https://yahoo\.com (when using --origins-domains yandex.com)
+        if ($http_origin !~ "^https://yahoo\.com$") {
             add_header X-Frame-Options SAMEORIGIN;
         }
     """
     summary = 'Validation regex for "origin" or "referer" matches untrusted domain or invalid value.'
-    severity = gixy.severity.MEDIUM
+    severity_invalid_header = gixy.severity.LOW
+    severity_insecure_referer = gixy.severity.MEDIUM
+    severity_insecure_origin = gixy.severity.HIGH
     description = 'Improve the regular expression to match only correct and trusted referers and origins.'
     help_url = 'https://github.com/dvershinin/gixy/blob/master/docs/en/plugins/origins.md'
     directives = ['if']
@@ -105,7 +128,7 @@ class origins(Plugin):
 
         if self.directive_type == '$http_referrer':
             reason = 'Incorrect header "$http_referrer". Use "$http_referer".'
-            self.add_issue(directive=directive, reason=reason, severity=gixy.severity.HIGH)
+            self.add_issue(directive=directive, reason=reason, severity=severity_insecure_origin)
             return
 
         self.insecure_set = set()
@@ -113,7 +136,7 @@ class origins(Plugin):
 
         case_sensitive = directive.operand in ['~', '!~']
         name = self.directive_type.split('_')[1]
-        severity = gixy.severity.HIGH if name == 'origin' else gixy.severity.MEDIUM
+        severity = severity_insecure_origin if name == 'origin' else severity_insecure_referer
 
         regexp = Regexp(directive.value, case_sensitive=case_sensitive)
         for candidate_match in regexp.generate('`', anchored=True, max_repeat=5): # Replace matching groups with '`' (which should not be in a real URL as it should be url-encoded).
@@ -275,4 +298,4 @@ class origins(Plugin):
             if self.lower_hostname:
                 reason += ' All characters in the scheme and hostname should be lowercase.'
 
-            self.add_issue(directive=directive, reason=reason, severity=gixy.severity.LOW)
+            self.add_issue(directive=directive, reason=reason, severity=severity_invalid_header)
