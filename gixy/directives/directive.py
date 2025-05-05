@@ -68,6 +68,57 @@ class Directive:
         return f"{self.name} {' '.join(self.args)};"
 
 
+class MapDirective(Directive):
+    """
+    map $source $destination {
+        default value;
+        key     value;
+    }
+    """
+
+    nginx_name = "map" # XXX: Should also work for "charset_map"
+    provide_variables = True
+
+    def __init__(self, source, destination):
+        super().__init__(source, destination)
+        self.source = source if source else None
+        self.destination = destination[0] if destination and len(destination) == 1 else None
+        self.default = ""
+
+        if self.source and self.source == 'default' and self.destination:
+            self.default = self.destination
+
+    @property
+    def variables(self):
+        return []
+
+
+class GeoDirective(Directive):
+    r"""
+    geo [$remote_addr] $geo {
+      default        0;
+      127.0.0.1      2;
+    }
+    """
+
+    nginx_name = "geo"
+    provide_variables = True
+
+    def __init__(self, source, destination):
+        super().__init__(source, destination)
+        self.source = source if source else None
+        self.destination = destination[0] if destination and len(destination) == 1 else None
+        self.default = ""
+
+        if self.source and self.source == 'default' and self.destination:
+            self.default = self.destination
+
+        # TODO: Invalid values default to 255.255.255.255
+
+    @property
+    def variables(self):
+        return []
+
 class AddHeaderDirective(Directive):
     """The add_header directive is used to add a header to the response"""
 

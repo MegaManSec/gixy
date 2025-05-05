@@ -6,7 +6,9 @@ class if_is_evil(Plugin):
     """
     Insecure example:
         location /files {
-            alias /home/;
+            if ($request_method = POST) {
+                return 403;
+            }
         }
     """
     summary = 'If is Evil... when used in location context.'

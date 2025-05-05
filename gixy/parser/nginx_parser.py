@@ -98,6 +98,8 @@ class NginxParser(object):
             return block.Block
         elif parsed_type == "directive":
             return directive.Directive
+        elif parsed_type == "hash_value":
+            return directive.MapDirective
         elif parsed_type == "unparsed_block":
             LOG.warning('Skip unparseable block: "%s"', parsed_name)
             return None

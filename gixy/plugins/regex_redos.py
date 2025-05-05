@@ -1,7 +1,7 @@
 import requests
 import gixy
 from gixy.plugins.plugin import Plugin
-
+from gixy.directives.block import MapBlock
 
 class regex_redos(Plugin):
     r"""
@@ -40,7 +40,7 @@ class regex_redos(Plugin):
         'resources (also known as ReDoS).'
     )
     help_url = 'https://joshua.hu/regex-redos-recheck-nginx-gixy'
-    directives = ['location']  # XXX: Missing server_name, rewrite, if, map, proxy_redirect
+    directives = ['location', 'server_name', 'proxy_redirect', 'if', 'rewrite', 'map']
     options = {
         'url': ""
     }
@@ -50,20 +50,58 @@ class regex_redos(Plugin):
         super(regex_redos, self).__init__(config)
         self.redos_server = self.config.get('url')
 
+        self.cached_results = {}
+
     def audit(self, directive):
         # If we have no ReDoS check URL, skip.
         if not self.redos_server:
             return
 
-        # Only process directives that have regex modifiers.
-        if directive.modifier not in ('~', '~*'):
+        regex_patterns = set()
+        child_val = {}
+
+        if directive.name == 'server_name':
+            for server_name in directive.args:
+                if server_name[0] != '~':
+                    continue
+                # server_name www.example.com ~^www.\d+\.example\.com$;
+                regex_patterns.add(server_name[1:])
+        elif directive.name == 'proxy_redirect':
+            if directive.args[0][0] == '~':
+                # proxy_redirect ~^//(.*)$ $scheme://$1;
+                if directive.args[0][1] == '*':
+                    regex_patterns.add(directive.args[0][2:])
+                else:
+                    regex_patterns.add(directive.args[0][1:])
+        elif directive.name == 'location':
+            if directive.modifier in ['~', '~*']:
+                # location ~ ^/example$ { }
+                regex_patterns.add(directive.path)
+        elif directive.name == 'if':
+            if directive.operand in ['~', '~*', '!~', '!~*']:
+                # if ($http_referer ~* ^https://example\.com/$") { }
+                regex_patterns.add(directive.value)
+        elif directive.name == 'rewrite':
+            # rewrite ^/1(/.*) $1 break;
+            regex_patterns.add(directive.pattern)
+        elif isinstance(directive, MapBlock):
+            for child in directive.children:
+                for map_val in [child.source, child.destination]:
+                    if map_val and map_val[0] == '~':
+                        map_val = map_val[1:]
+                        if map_val[0] == '*':
+                            map_val = map_val[1:]
+                        regex_patterns.add(map_val)
+                        child_val[map_val] = child
+
+        if not regex_patterns:
             return
 
-        regex_pattern = directive.path
-        fail_reason = f'Could not check regex {regex_pattern} for ReDoS.'
+        json_data = {}
 
-        modifier = "" if directive.modifier == "~" else "i"
-        json_data = {"1": {"pattern": regex_pattern, "modifier": modifier}}
+        for regex_pattern in regex_patterns:
+            if regex_pattern not in self.cached_results:
+                json_data[regex_pattern] = {"pattern": regex_pattern, "modifier": ""}
 
         # Attempt to contact the ReDoS check server.
         try:
@@ -73,46 +111,72 @@ class regex_redos(Plugin):
                 headers={"Content-Type": "application/json"},
                 timeout=60
             )
-        except requests.RequestException:
+        except requests.RequestException as e:
+            fail_reason = f'HTTP request to "{self.redos_server}" failed: {e}'
             self.add_issue(directive=directive, reason=fail_reason, severity=self.unknown_severity)
             return
 
         # If we get a non-200 response, skip.
         if response.status_code != 200:
+            fail_reason = f'HTTP request to "{self.redos_server}" with status code "{response.status_code}": {response.text}'
             self.add_issue(directive=directive, reason=fail_reason, severity=self.unknown_severity)
             return
 
         # Attempt to parse the JSON response.
         try:
             response_json = response.json()
-        except ValueError:
+        except ValueError as e:
+            fail_reason = f'Failed to parse JSON "{e}": "{response.text}"'
             self.add_issue(directive=directive, reason=fail_reason, severity=self.unknown_severity)
             return
 
-        # Ensure the expected data structure is present and matches the pattern.
-        if (
-            "1" not in response_json or
-            response_json["1"] is None or
-            "source" not in response_json["1"] or
-            response_json["1"]["source"] != regex_pattern
-        ):
+        unchecked_patterns = set()
+
+        for regex_pattern in regex_patterns:
+            if regex_pattern in self.cached_results:
+                continue
+            if (
+                regex_pattern not in response_json or
+                response_json[regex_pattern] is None or
+                "source" not in response_json[regex_pattern] or
+                response_json[regex_pattern]["source"] != regex_pattern
+            ):
+                if regex_pattern not in unchecked_patterns:
+                    unchecked_patterns.add(regex_pattern)
+
+        if unchecked_patterns:
+            unchecked_patterns = '", "'.join(unchecked_patterns)
+            fail_reason = 'Could not check expression(s) "{unchecked_patterns}" for ReDoS.'.format(unchecked_patterns=unchecked_patterns)
             self.add_issue(directive=directive, reason=fail_reason, severity=self.unknown_severity)
-            return
 
-        recheck = response_json["1"]
-        status = recheck.get("status")
+        vulnerable_patterns = set()
+        unknown_patterns = set()
 
-        # If status is neither 'vulnerable' nor 'unknown', the expression is safe.
-        if status not in ("vulnerable", "unknown"):
-            return
+        for regex_pattern in regex_patterns:
+            if regex_pattern in self.cached_results:
+                if self.cached_results[regex_pattern] == "vulnerable":
+                    vulnerable_patterns.add(regex_pattern)
+                else:
+                    continue
+            elif regex_pattern not in unchecked_patterns:
+                recheck = response_json[regex_pattern]
+                status = recheck.get("status")
 
-        # If the status is unknown, add a low-severity issue (likely the server timed out)
-        if status == "unknown":
-            reason = f'Could not check complexity of regex {regex_pattern}.'
-            self.add_issue(directive=directive, reason=reason, severity=self.unknown_severity)
-            return
+                if status == "unknown":
+                    unknown_patterns.add(regex_pattern)
+                    continue
 
-        # Status is 'vulnerable' here. Report as a high-severity issue.
-        complexity_summary = recheck.get("complexity", {}).get("summary", "unknown")
-        reason = f'Regex is vulnerable to {complexity_summary} ReDoS: {regex_pattern}.'
-        self.add_issue(directive=directive, reason=reason, severity=self.severity)
+                self.cached_results[regex_pattern] = status
+                if status == "vulnerable":
+                    vulnerable_patterns.add(regex_pattern)
+                    continue
+
+        if unknown_patterns:
+            unknown_patterns_string = '", "'.join(unknown_patterns)
+            fail_reason = 'Unknown complexity of expression(s) "{unknown_patterns}".'.format(unknown_patterns=unknown_patterns_string)
+            self.add_issue(directive=[directive] + [child_val[mv] for mv in unknown_patterns if mv in child_val], reason=fail_reason, severity=self.unknown_severity)
+
+        if vulnerable_patterns:
+            vulnerable_patterns_string = '", "'.join(vulnerable_patterns)
+            fail_reason = 'ReDoS possible due to expression(s) "{vulnerable_patterns}".'.format(vulnerable_patterns=vulnerable_patterns_string)
+            self.add_issue(directive=[directive] + [child_val[mv] for mv in vulnerable_patterns if mv in child_val], reason=fail_reason, severity=self.severity)
