@@ -22,6 +22,6 @@ class error_log_off(Plugin):
         if directive.args[0] == "off":
             self.add_issue(
                 severity=self.severity,
-                directive=[directive],
+                directive=directive,
                 reason="The error_log directive should not be set to off.",
             )

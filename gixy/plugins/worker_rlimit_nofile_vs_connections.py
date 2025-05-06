@@ -42,7 +42,7 @@ class worker_rlimit_nofile_vs_connections(Plugin):
         else:
             self.add_issue(
                 severity=self.severity,
-                directive=[directive],
+                directive=directive,
                 reason=(
                     "Missing worker_rlimit_nofile with at least twice the value of worker_connections"
                 ),

@@ -57,7 +57,7 @@ def _get_cli_parser():
         dest="level",
         action="count",
         default=0,
-        help="Report issues of a given severity level or higher (-l for LOW, -ll for MEDIUM, -lll for HIGH)",
+        help="Report issues of a given severity level or higher (-l for LOW, -ll for MEDIUM, -lll for HIGH)", # XXX: UNSPECIFIED?
     )
 
     default_formatter = "console" if sys.stdout.isatty() else "text"

@@ -40,7 +40,7 @@ class if_is_evil(Plugin):
                          'argument is used'
             self.add_issue(
                 severity=gixy.severity.HIGH,
-                directive=[directive, parent],
+                directive=[directive, parent, grandparent],
                 reason=reason
             )
 

@@ -73,7 +73,7 @@ class proxy_pass_normalized(Plugin):
 
         self.add_issue(
             severity=self.severity,
-            directive=[directive, directive.parent],
+            directive=[directive, rewrite],
             reason=(
                 "Found a path after the host in proxy_pass, without using $request_uri and a variable (such as $1 or $uri). "
                 "This can lead to path decoding issues or double-encoding issues."
