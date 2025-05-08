@@ -88,6 +88,8 @@ class MapDirective(Directive):
         if self.source and self.source == 'default' and self.destination:
             self.default = self.destination
 
+        # TODO: `include` is supported inside a map block.
+
     @property
     def variables(self):
         return []
