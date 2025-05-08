@@ -6,7 +6,7 @@ from gixy.core.variable import compile_script
 import re
 
 class alias_traversal(Plugin):
-    """
+    r"""
     Insecure examples:
         location /files {
             alias /home/;
@@ -23,8 +23,6 @@ class alias_traversal(Plugin):
     directives = ['alias']
 
     def audit(self, directive):
-        severity = self.severity
-
         for location in directive.parents:
             if location.name != 'location':
                 continue
@@ -39,6 +37,7 @@ class alias_traversal(Plugin):
                 # /images/(.*)/lol <- location_regex
                 # alias /app/static/$1; < - sets[]
                 # [('/app/static/', None), ('.*', '/app/static/')]
+
                 location_regex = re.sub(r"\\(.)", r"\1", location.path)
 
                 up_to_char = 0
@@ -52,11 +51,15 @@ class alias_traversal(Plugin):
                         up_to_char = found_char
 
                         pre_location_ends_with_slash = False
-                        if up_to_char >= 0:
+                        if up_to_char == 0 and var.must_startswith('/'):
+                            pre_location_ends_with_slash = True
+                        elif up_to_char > 0:
                             if location_regex[up_to_char-1] == '/' or var.must_startswith('/'):
                                 pre_location_ends_with_slash = True
 
-                        if not pre_location_ends_with_slash:
+                        if not prev_var:
+                            self.report_issue(directive, location, gixy.severity.HIGH)
+                        elif not pre_location_ends_with_slash:
                             if str(prev_var.value)[-1] == '/':
                                 if var.can_startswith('.'):
                                     if var.can_contain('/'):
@@ -64,14 +67,14 @@ class alias_traversal(Plugin):
                                         self.report_issue(directive, location, gixy.severity.HIGH)
                                     else:
                                         # location /site([^/]*) ~ { alias /lol/$1; }
-                                        self.report_issue(directive, location, gixy.severity.LOW)
+                                        self.report_issue(directive, location, gixy.severity.MEDIUM)
                             else:
                                 # location /site(.*) ~ { alias /lol$1; }
-                                self.report_issue(directive, location, gixy.severity.LOW)
+                                self.report_issue(directive, location, gixy.severity.MEDIUM)
                         else:
                             if str(prev_var.value)[-1] != '/' and not var.must_startswith('/'):
                                 # location /site/(.*) ~ { alias /lol$1; }
-                                self.report_issue(directive, location, gixy.severity.LOW)
+                                self.report_issue(directive, location, gixy.severity.MEDIUM)
 
             elif not location.modifier or location.modifier == '^~':
                 # We need non-strict prefixed locations
@@ -79,7 +82,7 @@ class alias_traversal(Plugin):
                     if directive.path.endswith('/'):
                         self.report_issue(directive, location, gixy.severity.HIGH)
                     else:
-                        self.report_issue(directive, location, gixy.severity.LOW)
+                        self.report_issue(directive, location, gixy.severity.MEDIUM)
             return
 
     def report_issue(self, directive, location, severity):
