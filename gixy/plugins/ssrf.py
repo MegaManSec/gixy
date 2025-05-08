@@ -7,7 +7,7 @@ from gixy.core.variable import compile_script
 
 
 class ssrf(Plugin):
-    """
+    r"""
     Insecure examples:
         location ~ /proxy/(.*)/(.*)/(.*)$ {
             set $scheme $1;
