@@ -63,6 +63,8 @@ class BaseFormatter(object):
     def _resolve_config(self, root, directives):
         points = set()
         for directive in directives:
+            if not directive:
+                continue
             points.add(directive)
             points.update(p for p in directive.parents)
 
