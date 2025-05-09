@@ -2,7 +2,7 @@ from gixy.parser.raw_parser import *
 
 
 def test_directive():
-    config = """
+    config = r"""
 access_log syslog:server=127.0.0.1,tag=nginx_sentry toolsformat;
 user http;
 internal;
@@ -25,8 +25,8 @@ rewrite ^/([a-zA-Z0-9]+)$ /$1/${arg_v}.pb break;
         [
             "server_name",
             "some.tld",
-            "~^(www\.)?podberi.(?:ru|com|ua)$",
-            "~^(www\.)?guru.yandex.ru$",
+            r"~^(www\.)?podberi.(?:ru|com|ua)$",
+            r"~^(www\.)?guru.yandex.ru$",
         ],
     ]
 
@@ -55,7 +55,7 @@ http {
 
 
 def test_location_simple():
-    config = """
+    config = r"""
 location / {
 }
 location = /foo {
@@ -78,7 +78,7 @@ location ~\.(js|css)$ {
         ["location", ["~*", "^/baz$"], []],
         ["location", ["^~", "^/bazz"], []],
         ["Whitespace may be omitted:(("],
-        ["location", ["~", "\.(js|css)$"], []],
+        ["location", ["~", r"\.(js|css)$"], []],
     ]
 
     assert_config(config, expected)
@@ -274,10 +274,10 @@ if ($foo = "BAR") { rewrite ^(.*)$ /bar; }
         ["if", ["$slow"], [["limit_rate", "10k"]]],
         ["if", ["$invalid_referer"], [["return", "403"]]],
         ["if", ["!-e", "/var/data/$dataset"], [["return", "503"]]],
-        ["if", ["$https_or_slb", "=", "(by_\(sl\)b|https)"], []],
+        ["if", ["$https_or_slb", "=", r"(by_\(sl\)b|https)"], []],
         [
             "if",
-            ["$host", "~*", "(lori|rage2)\.yandex\.(ru|ua|com|com\.tr)"],
+            ["$host", "~*", r"(lori|rage2)\.yandex\.(ru|ua|com|com\.tr)"],
             [["set", "$x_frame_options", "ALLOW"]],
         ],
         ["if", ["$request_filename", "~*", r"^.*?/(\d+_)([^/]+)$"], []],
@@ -380,7 +380,7 @@ server {
 
 
 def test_issue_8():
-    config = """
+    config = r"""
 # http://nginx.org/ru/docs/http/ngx_http_upstream_module.html
 if ($http_referer ~* (\.(ru|ua|by|kz)/(pages/music|partners/|page-no-rights\.xml)) ) {
     set $temp A;
@@ -394,7 +394,7 @@ if ($http_referer ~* (\.(ru|ua|by|kz)/(pages/music|partners/|page-no-rights\.xml
             [
                 "$http_referer",
                 "~*",
-                "(\.(ru|ua|by|kz)/(pages/music|partners/|page-no-rights\.xml))",
+                r"(\.(ru|ua|by|kz)/(pages/music|partners/|page-no-rights\.xml))",
             ],
             [["set", "$temp", "A"]],
         ],
