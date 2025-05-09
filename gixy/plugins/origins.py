@@ -298,4 +298,4 @@ class origins(Plugin):
             if self.lower_hostname:
                 reason += ' All characters in the scheme and hostname should be lowercase.'
 
-            self.add_issue(directive=directive, reason=reason, severity=severity_invalid_header)
+            self.add_issue(directive=directive, reason=reason, severity=self.severity_invalid_header)
