@@ -128,7 +128,7 @@ class origins(Plugin):
 
         if self.directive_type == '$http_referrer':
             reason = 'Incorrect header "$http_referrer". Use "$http_referer".'
-            self.add_issue(directive=directive, reason=reason, severity=severity_insecure_origin)
+            self.add_issue(directive=directive, reason=reason, severity=self.severity_insecure_origin)
             return
 
         self.insecure_set = set()
@@ -136,7 +136,7 @@ class origins(Plugin):
 
         case_sensitive = directive.operand in ['~', '!~']
         name = self.directive_type.split('_')[1]
-        severity = severity_insecure_origin if name == 'origin' else severity_insecure_referer
+        severity = self.severity_insecure_origin if name == 'origin' else self.severity_insecure_referer
 
         regexp = Regexp(directive.value, case_sensitive=case_sensitive)
         for candidate_match in regexp.generate('`', anchored=True, max_repeat=5): # Replace matching groups with '`' (which should not be in a real URL as it should be url-encoded).
