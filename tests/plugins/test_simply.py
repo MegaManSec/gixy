@@ -80,7 +80,8 @@ def yoda_provider(plugin, plugin_options=None):
 def test_configuration(plugin, config_path, test_config):
     plugin_options = parse_plugin_options(config_path)
     with yoda_provider(plugin, plugin_options) as yoda:
-        yoda.audit(config_path, open(config_path, mode='r'))
+        with open(config_path, mode='r') as f:
+            yoda.audit(config_path, f)
         formatter = BaseFormatter()
         formatter.feed(config_path, yoda)
         _, results = formatter.reports.popitem()
@@ -103,5 +104,6 @@ def test_configuration(plugin, config_path, test_config):
 @pytest.mark.parametrize('plugin,config_path,test_config', all_config_fp_cases)
 def test_configuration_fp(plugin, config_path, test_config):
     with yoda_provider(plugin) as yoda:
-        yoda.audit(config_path, open(config_path, mode='r'))
+        with open(config_path, mode='r') as f:
+            yoda.audit(config_path, f)
         assert len([x for x in yoda.results]) == 0, 'False positive configuration must not trigger any plugins'
