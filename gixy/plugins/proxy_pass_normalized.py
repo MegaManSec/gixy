@@ -26,7 +26,6 @@ class proxy_pass_normalized(Plugin):
 
     def audit(self, directive):
         proxy_pass_args = directive.args
-        rewrite_fail = False
         parent = directive.parent
 
         if not proxy_pass_args:
