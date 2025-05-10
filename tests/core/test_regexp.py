@@ -89,18 +89,18 @@ def test_groups_names(regexp, groups):
 
 
 @pytest.mark.parametrize('regexp,string', (
-    (r'foo', 'foo'),
-    (r'(1)(2)(?:3)', '(1)(2)(?:3)'),
-    (r'(1)((2)|(?:3))', '(1)((?:(2)|(?:3)))'),
-    (r'\w|1|3-5|[a-z]', '(?:[\w]|1|3\\-5|[a-z])'),
-    (r'(1|(?:3)|([4-6]))', '((?:1|(?:3)|([4-6])))'),
-    (r'(1|(?:3)|(?P<aaa>[4-6]))', '((?:1|(?:3)|([4-6])))'),
-    (r'^sss', '^sss'),
-    (r'(^bb|11)$', '((?:^bb|11))$'),
-    (r'(http|https)', '(http(?:|s))'),
-    (r'1*', '1*'),
-    (r'1*?', '1*?'),
-    (r'1+', '1+'),
+    (r'foo', r'foo'),
+    (r'(1)(2)(?:3)', r'(1)(2)(?:3)'),
+    (r'(1)((2)|(?:3))', r'(1)((?:(2)|(?:3)))'),
+    (r'\w|1|3-5|[a-z]', r'(?:[\w]|1|3\-5|[a-z])'),
+    (r'(1|(?:3)|([4-6]))', r'((?:1|(?:3)|([4-6])))'),
+    (r'(1|(?:3)|(?P<aaa>[4-6]))', r'((?:1|(?:3)|([4-6])))'),
+    (r'^sss', r'^sss'),
+    (r'(^bb|11)$', r'((?:^bb|11))$'),
+    (r'(http|https)', r'(http(?:|s))'),
+    (r'1*', r'1*'),
+    (r'1*?', r'1*?'),
+    (r'1+', r'1+'),
 ))
 def test_to_string(regexp, string):
     reg = Regexp(regexp)
@@ -108,20 +108,20 @@ def test_to_string(regexp, string):
 
 
 @pytest.mark.parametrize('regexp,char,strict', (
-    (r'foo', 'q', False),
-    (r'foo', 'f', True),
-    (r'^foo', 'f', False),
-    (r'(^foo)', 'f', False),
-    (r'(^foo)', 'f', True),
-    (r'(^foo|g)', 'f', True),
-    (r'(^foo|g)', 'g', True),
-    (r'(^foo|g)', 'q', False),
-    (r'^[^/]+', '\n', True),
-    (r'/[^/]+', '/', True),
-    (r'((a))', 'a', False),
-    (r'((a))', 'b', False),
-    (r'^[a-z]{0}0', '0', False),
-    (r'^[a-z]{1}0', 'a', False),
+    (r'foo', r'q', False),
+    (r'foo', r'f', True),
+    (r'^foo', r'f', False),
+    (r'(^foo)', r'f', False),
+    (r'(^foo)', r'f', True),
+    (r'(^foo|g)', r'f', True),
+    (r'(^foo|g)', r'g', True),
+    (r'(^foo|g)', r'q', False),
+    (r'^[^/]+', r'\n', True),
+    (r'/[^/]+', r'/', True),
+    (r'((a))', r'a', False),
+    (r'((a))', r'b', False),
+    (r'^[a-z]{0}0', r'0', False),
+    (r'^[a-z]{1}0', r'a', False),
 ))
 def test_positive_startswith(regexp, char, strict):
     reg = Regexp(regexp, case_sensitive=True, strict=strict)
