@@ -1,7 +1,7 @@
 import pytest
 from gixy.parser.nginx_parser import NginxParser
 from gixy.directives.directive import Directive, SetDirective, RewriteDirective
-from gixy.directives.block import Block, IfBlock, LocationBlock, Root, HttpBlock, IncludeBlock
+from gixy.directives.block import Block, IfBlock, LocationBlock, Root, HttpBlock, IncludeBlock, ServerBlock
 
 
 def _parse(config):
