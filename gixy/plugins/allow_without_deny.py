@@ -4,8 +4,8 @@ from gixy.plugins.plugin import Plugin
 
 class allow_without_deny(Plugin):
     """
-    Bad example: add_header Content-Type text/plain;
-    Good example: default_type text/plain;
+    Bad: allow 127.0.0.1;
+    Good: allow 127.0.0.1; deny all;
     """
     summary = 'Found allow directive(s) without deny in the same context.'
     severity = gixy.severity.HIGH
@@ -28,7 +28,7 @@ class allow_without_deny(Plugin):
         if not deny_found:
             reason = 'You probably want "deny all;" after all the "allow" directives'
             self.add_issue(
-                directive=[directive, parent, child],
+                directive=[directive, parent, parent.children[len(parent.children)-1]],
                 reason=reason
             )
 
