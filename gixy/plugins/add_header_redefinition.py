@@ -35,7 +35,7 @@ class add_header_redefinition(Plugin):
             'strict-transport-security',
             'x-content-type-options',
             'x-frame-options',
-            'x-xss-protection'
+            'x-xss-protection',
             'expect-ct',
             'pragma',
             'expires',
