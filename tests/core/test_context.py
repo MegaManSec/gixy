@@ -1,4 +1,4 @@
-from gixy.core.context import get_context, pop_context, push_context, purge_context, CONTEXTS, Context
+from gixy.core.context import get_context, pop_context, push_context, purge_context, CONTEXTS
 from gixy.directives.block import Root
 from gixy.core.variable import Variable
 from gixy.core.regexp import Regexp
@@ -77,8 +77,8 @@ def test_get_variables():
     assert context.get_var(1) == one_var
     assert context.get_var('some') == some_var
     # Checks not existed variables, for now context may return None
-    assert context.get_var(0) == None
-    assert context.get_var('not_existed') == None
+    assert context.get_var(0) is None
+    assert context.get_var('not_existed') is None
     # Checks builtins variables
     assert context.get_var('uri')
     assert context.get_var('document_uri')
@@ -114,7 +114,7 @@ def test_context_depend_variables():
     pop_context()
     assert get_context().get_var('some').value != 'some_new'
     assert get_context().get_var('some').value == 'some'
-    assert get_context().get_var('foo') == None
+    assert get_context().get_var('foo') is None
     assert get_context().get_var(1).value == 'one'
 
 

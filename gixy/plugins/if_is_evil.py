@@ -43,5 +43,3 @@ class if_is_evil(Plugin):
                 directive=[directive, parent, grandparent],
                 reason=reason
             )
-
-

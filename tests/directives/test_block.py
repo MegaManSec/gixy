@@ -1,5 +1,5 @@
 from gixy.parser.nginx_parser import NginxParser
-from gixy.directives.block import *
+from gixy.directives.block import Block, HttpBlock, ServerBlock, LocationBlock, IfBlock, MapBlock, GeoBlock
 
 # TODO(buglloc): what about include block?
 

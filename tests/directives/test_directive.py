@@ -1,5 +1,5 @@
 from gixy.parser.nginx_parser import NginxParser
-from gixy.directives.directive import *
+from gixy.directives.directive import Directive, AddHeaderDirective, SetDirective, RewriteDirective, RootDirective
 
 
 def _get_parsed(config):
@@ -68,7 +68,7 @@ def test_rewrite():
 
     assert directive.pattern == '^'
     assert directive.replace == 'http://some'
-    assert directive.flag == None
+    assert directive.flag is None
 
 
 def test_rewrite_flags():

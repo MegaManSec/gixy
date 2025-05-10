@@ -3,6 +3,7 @@ from gixy.directives.block import Root
 from gixy.core.regexp import Regexp
 from gixy.core.variable import Variable
 
+
 def setup_function():
     push_context(Root())
 

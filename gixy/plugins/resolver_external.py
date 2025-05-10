@@ -23,5 +23,3 @@ class resolver_external(Plugin):
                     dns_servers=", ".join(bad_nameservers)
                 )
             )
-
-

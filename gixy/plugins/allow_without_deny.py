@@ -31,5 +31,3 @@ class allow_without_deny(Plugin):
                 directive=[directive, parent, parent.children[len(parent.children)-1]],
                 reason=reason
             )
-
-
