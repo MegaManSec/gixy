@@ -7,7 +7,7 @@ class if_is_evil(Plugin):
     Insecure example:
         location /files {
             if ($request_method = POST) {
-                return 403;
+                add_header X-Second 2;
             }
         }
     """
