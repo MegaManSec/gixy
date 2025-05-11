@@ -64,6 +64,7 @@ class NginxParser(object):
             parsed_args = parsed[1:]
             if parsed_type == "include":
                 # TODO: WTF?!
+                # Possible within a map {}
                 self._resolve_include(parsed_args, parent)
             else:
                 directive_inst = self.directive_factory(

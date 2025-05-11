@@ -15,7 +15,7 @@ class add_header_content_type(Plugin):
     help_url = "https://github.com/dvershinin/gixy/blob/master/docs/en/plugins/add_header_content_type.md"
     directives = ["add_header"]
 
-    def audit(self, directive: AddHeaderDirective):
+    def audit(self, directive):
         if directive.header == "content-type":
             reason = 'You probably want "default_type {default_type};" instead of "add_header" or "more_set_headers"'.format(
                 default_type=directive.value

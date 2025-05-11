@@ -21,7 +21,7 @@ class add_header_multiline(Plugin):
     help_url = "https://github.com/dvershinin/gixy/blob/master/docs/en/plugins/addheadermultiline.md"
     directives = ["add_header", "more_set_headers"]
 
-    def audit(self, directive: AddHeaderDirective):
+    def audit(self, directive):
         for header, value in directive.headers.items():
             if "\n\x20" in value or "\n\t" in value:
                 self.add_issue(directive=directive)
