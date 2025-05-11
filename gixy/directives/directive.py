@@ -77,7 +77,6 @@ class MapDirective(Directive):
     """
 
     nginx_name = "map" # XXX: Should also work for "charset_map"
-    provide_variables = True
 
     def __init__(self, source, destination):
         super().__init__(source, destination)
@@ -90,10 +89,6 @@ class MapDirective(Directive):
 
         # TODO: `include` is supported inside a map block.
 
-    @property
-    def variables(self):
-        return []
-
 
 class GeoDirective(Directive):
     r"""
@@ -104,7 +99,6 @@ class GeoDirective(Directive):
     """
 
     nginx_name = "geo"
-    provide_variables = True
 
     def __init__(self, source, destination):
         super().__init__(source, destination)
@@ -117,9 +111,6 @@ class GeoDirective(Directive):
 
         # TODO: Invalid values default to 255.255.255.255
 
-    @property
-    def variables(self):
-        return []
 
 class AddHeaderDirective(Directive):
     """The add_header directive is used to add a header to the response"""
