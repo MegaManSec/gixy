@@ -21,7 +21,7 @@ class NginxParser(object):
         self.directives = {}
         self.parser = raw_parser.RawParser()
         self._init_directives()
-        self._path_stack = []
+        self._path_stack = None
 
     def parse_file(self, path, root=None):
         LOG.debug("Parse file: {0}".format(path))
@@ -30,7 +30,7 @@ class NginxParser(object):
 
     def parse(self, content, root=None, path_info=None):
         if path_info is not None:
-            self._path_stack.append(path_info)
+            self._path_stack = path_info
 
         if not root:
             root = block.Root()
@@ -55,7 +55,7 @@ class NginxParser(object):
             LOG.info("Switched to parse nginx configuration dump.")
             root_filename = self._prepare_dump(parsed)
             if self.path_info:
-                self._path_stack[-1] = self.path_info # XXX: hack because parse() is called in tests without setting _path_stack
+                self._path_stack = self.path_info # XXX: hack because parse() is called in tests without setting _path_stack
             self.is_dump = True
             self.cwd = os.path.dirname(root_filename)
             parsed = self.configs[root_filename]
@@ -72,7 +72,9 @@ class NginxParser(object):
             parsed_args = parsed[1:]
             if parsed_type == "include":
                 # TODO: WTF?!
+                path_info = self.path_info
                 self._resolve_include(parsed_args, parent)
+                self._path_stack = path_info
             else:
                 directive_inst = self.directive_factory(
                     parsed_type, parsed_info, parsed_args
@@ -176,4 +178,4 @@ class NginxParser(object):
     @property
     def path_info(self):
         """Current file being parsed, or None."""
-        return self._path_stack[-1] if self._path_stack else None
+        return self._path_stack if self._path_stack else None
