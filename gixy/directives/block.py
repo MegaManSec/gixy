@@ -4,7 +4,7 @@ except ImportError:
     from functools import cached_property
 
 from gixy.directives.directive import Directive
-from gixy.core.variable import Variable
+from gixy.core.variable import Variable, compile_script
 from gixy.core.regexp import Regexp
 
 
@@ -178,15 +178,18 @@ class IfBlock(Block):
         if not self.is_regex:
             return []
 
+        boundary = None
+        compiled_script = compile_script(self.variable)
+        if len(compiled_script) == 1:
+            boundary = compiled_script[0].value
+
         regexp = Regexp(self.value, case_sensitive=self.operand in ["~", '!~'])
         result = []
         for name, group in regexp.groups.items():
             result.append(
-                Variable(name=name, value=group, boundary=None, provider=self)
+                Variable(name=name, value=group, boundary=boundary, provider=self)
             )
         return result
-
-
 
     def __str__(self):
         return "{name} ({args}) {{".format(name=self.name, args=" ".join(self.args))
