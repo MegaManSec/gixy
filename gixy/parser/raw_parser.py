@@ -9,7 +9,7 @@ except ImportError:
 from pyparsing import (
     Literal, Suppress, White, Word, alphanums, Forward, Group, Optional, Combine,
     Keyword, OneOrMore, ZeroOrMore, Regex, QuotedString, nestedExpr, ParseResults,
-    Oneof, lineno, col, ParseException)
+    oneOf, lineno, col, ParseException)
 
 LOG = logging.getLogger(__name__)
 
