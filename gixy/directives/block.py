@@ -4,7 +4,7 @@ except ImportError:
     from functools import cached_property
 
 from gixy.directives.directive import Directive
-from gixy.core.variable import Variable
+from gixy.core.variable import Variable, compile_script
 from gixy.core.regexp import Regexp
 
 
@@ -149,6 +149,7 @@ class LocationBlock(Block):
 class IfBlock(Block):
     nginx_name = "if"
     self_context = False
+    provide_variables = True
 
     def __init__(self, name, args):
         super(IfBlock, self).__init__(name, args)
@@ -167,6 +168,28 @@ class IfBlock(Block):
             self.variable, self.operand, self.value = args
         else:
             raise Exception('Unknown "if" definition, args: {0!r}'.format(args))
+
+    @property
+    def is_regex(self):
+        return self.operand and self.operand in ("~", "~*", '!~', '!~*')
+
+    @cached_property
+    def variables(self):
+        if not self.is_regex:
+            return []
+
+        boundary = None
+        compiled_script = compile_script(self.variable)
+        if len(compiled_script) == 1:
+            boundary = compiled_script[0].value
+
+        regexp = Regexp(self.value, case_sensitive=self.operand in ["~", '!~'])
+        result = []
+        for name, group in regexp.groups.items():
+            result.append(
+                Variable(name=name, value=group, boundary=boundary, provider=self)
+            )
+        return result
 
     def __str__(self):
         return "{name} ({args}) {{".format(name=self.name, args=" ".join(self.args))

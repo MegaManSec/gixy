@@ -103,7 +103,7 @@ if ($some) {
     assert isinstance(directive, IfBlock)
     assert directive.is_block
     assert not directive.self_context
-    assert not directive.provide_variables
+    assert directive.provide_variables
     assert directive.variable == '$some'
     assert directive.operand is None
     assert directive.value is None
