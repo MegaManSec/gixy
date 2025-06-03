@@ -55,12 +55,13 @@ class NginxParser(object):
             LOG.info("Switched to parse nginx configuration dump.")
             root_filename = self._prepare_dump(parsed)
             if self.path_info:
-                self._path_stack = self.path_info # XXX: hack because parse() is called in tests without setting _path_stack
+                self._path_stack = path_info # XXX: hack because parse() is called in tests without setting _path_stack
             self.is_dump = True
             self.cwd = os.path.dirname(root_filename)
             parsed = self.configs[root_filename]
 
         self.parse_block(parsed, root)
+        self._path_stack = path_info
         return root
 
     def parse_block(self, parsed_block, parent):
@@ -70,6 +71,13 @@ class NginxParser(object):
             parsed_name = parsed[0]
             parsed_info = {parsed_name: line}
             parsed_args = parsed[1:]
+            if parent.name in ['map', 'geo'] and parsed_type == 'directive': # Hack because included maps are treated as directives (bleh)
+                if len(parsed_args) > 1:
+                    error_msg = "Invalid map with {} parameters: map {} {} {{ {} {}; }};".format(len(parsed_args), parent.args[0], parent.args[1], parsed_name, ' '.join(parsed_args))
+                    LOG.warn('Failed to parse "{path_info}": {error}'.format(path_info=self.path_info, error=error_msg))
+                    continue
+
+                parsed_type = 'hash_value'
             if parsed_type == "include":
                 # TODO: WTF?!
                 path_info = self.path_info
@@ -114,6 +122,8 @@ class NginxParser(object):
             return block.Block
         elif parsed_type == "directive":
             return directive.Directive
+        elif parsed_type == "hash_value":
+            return directive.MapDirective
         elif parsed_type == "unparsed_block":
             LOG.warning('Skip unparseable block in %s beginning at line %s: "%s"', self.path_info, parsed_line, parsed_name)
             return None

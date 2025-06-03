@@ -106,9 +106,9 @@ class RawParser(object):
             Regex(r"#.*")
         )("comment")
 
-        hash_value = Group(
+        hash_value = (
             value +
-            ZeroOrMore(space + value) +
+            Optional(ZeroOrMore(space) + value) +
             semicolon
         )("hash_value")
 
@@ -156,7 +156,7 @@ class RawParser(object):
             Group(OneOrMore(space + value)) +
             Group(
                 left_bracket +
-                Optional(OneOrMore(hash_value)) +
+                Optional(OneOrMore(Group(include | hash_value))) +
                 right_bracket)
         )("block")
 

@@ -207,6 +207,7 @@ def test_block_map():
     config = '''
 map $some_var $some_other_var {
     a   b;
+    ~*(.*) $1;
     default c;
 }
     '''
@@ -216,7 +217,12 @@ map $some_var $some_other_var {
     assert directive.is_block
     assert not directive.self_context
     assert directive.provide_variables
+    assert directive.source == '$some_var'
     assert directive.variable == 'some_other_var'
+    assert directive.children
+    assert len(directive.children) == 3
+    assert [c.src_val for c in directive.children] == ['a', '~*(.*)', 'default']
+    assert [c.dest_val for c in directive.children] == ['b', '$1', 'c']
 
 
 def test_block_geo_two_vars():
@@ -232,7 +238,12 @@ geo $some_var $some_other_var {
     assert directive.is_block
     assert not directive.self_context
     assert directive.provide_variables
+    assert directive.source == '$some_var'
     assert directive.variable == 'some_other_var'
+    assert directive.children
+    assert len(directive.children) == 2
+    assert [c.src_val for c in directive.children] == ['1.2.3.4', 'default']
+    assert [c.dest_val for c in directive.children] == ['b', 'c']
 
 
 def test_block_geo_one_var():
@@ -248,7 +259,12 @@ geo $some_var {
     assert directive.is_block
     assert not directive.self_context
     assert directive.provide_variables
+    assert directive.source == '$remote_addr'
     assert directive.variable == 'some_var'
+    assert directive.children
+    assert len(directive.children) == 2
+    assert [c.src_val for c in directive.children] == ['5.6.7.8', 'default']
+    assert [c.dest_val for c in directive.children] == ['d', 'e']
 
 
 def test_block_upstream():
@@ -275,4 +291,3 @@ server {
     assert directive.children[0].children[0].name == 'error_log'
     assert isinstance(directive.children[0].children[0].parent, Block)
     assert directive.children[0].children[0].args == ['off']
-
