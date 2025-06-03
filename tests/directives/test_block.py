@@ -249,3 +249,30 @@ geo $some_var {
     assert not directive.self_context
     assert directive.provide_variables
     assert directive.variable == 'some_var'
+
+
+def test_block_upstream():
+    config = '''
+server {
+  upstream upstream {
+    error_log off;
+  }
+}
+    '''
+
+    directive = _get_parsed(config)
+    assert isinstance(directive, ServerBlock)
+    assert directive.name == 'server'
+    assert isinstance(directive.parent, Root)
+    assert directive.args == []
+
+    assert isinstance(directive.children[0], Block)
+    assert directive.children[0].name == 'upstream'
+    assert isinstance(directive.children[0].parent, ServerBlock)
+    assert directive.children[0].args == ['upstream']
+
+    assert isinstance(directive.children[0].children[0], Directive)
+    assert directive.children[0].children[0].name == 'error_log'
+    assert isinstance(directive.children[0].children[0].parent, Block)
+    assert directive.children[0].children[0].args == ['off']
+
