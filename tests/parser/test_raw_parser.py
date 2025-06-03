@@ -83,6 +83,22 @@ location ~\.(js|css)$ {
 
     assert_config(config, expected)
 
+def test_location_complicated():
+    config = """
+location ~* (?:/[\ +])$ {
+}
+
+location ~* \((?:by[\ +])\) {
+}
+        """
+
+    expected = [
+        ["location", ["~*", "(?:/[\ +])$"], []],
+        ["location", ["~*", "\((?:by[\ +])\)"], []],
+    ]
+
+    assert_config(config, expected)
+
 
 def test_quoted_strings():
     config = """
