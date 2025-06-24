@@ -54,8 +54,6 @@ class NginxParser(object):
             #  Were parse nginx dump
             LOG.info("Switched to parse nginx configuration dump.")
             root_filename = self._prepare_dump(parsed)
-            if self.path_info:
-                self._path_stack = path_info # XXX: hack because parse() is called in tests without setting _path_stack
             self.is_dump = True
             self.cwd = os.path.dirname(root_filename)
             parsed = self.configs[root_filename]
