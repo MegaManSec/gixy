@@ -57,7 +57,7 @@ class missing_resolver(Plugin):
         upstream_directives = []
         found_upstream = False
         found_bad_server = False
-        for upstream in directive.find_directives_in_scope("upstream"):
+        for upstream in directive.find_imperative_directives_in_scope("upstream", True):
             if getattr(upstream, "args", None) == [parsed_host]:
                 found_upstream = True
                 for child in upstream.children:

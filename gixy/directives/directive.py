@@ -49,13 +49,32 @@ class Directive:
         """Get all variables provided by this directive"""
         raise NotImplementedError()
 
-    def find_directives_in_scope(self, name):
-        """Find directives in the current scope"""
+    def find_declarative_directives_in_scope(self, name, ancestors):
+        """Find declarative directives in the current scope, optionally from all ancestors too"""
+        node = self
+        parent = self.parent
+        while parent:
+            for child in parent.children:
+                if child is node:
+                    break
+
+                if child.name == name:
+                    yield child
+
+                if child.is_block and not child.self_context:
+                    yield from child.find_recursive(name)
+
+            if not ancestors:
+                break
+
+            node, parent = parent, parent.parent
+
+    def find_imperative_directives_in_scope(self, name, ancestors):
+        """Find imperative directives in the current scope, optionally from all ancestors too"""
         for parent in self.parents:
-            directive = parent.some(name, flat=False)
-            if directive:
-                yield directive
-        return None
+            yield from parent.find(name, flat=False)
+            if not ancestors:
+                break
 
     def find_single_directive_in_scope(self, name):
         """Find a single directive in the current scope"""
