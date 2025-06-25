@@ -230,9 +230,9 @@ class AliasDirective(Directive):
         self.path = args[0]
 
 
-def is_local_ipv6(ip):
+def is_ipv6(ip, local):
     """
-    Check if an IPv6 address is a local address
+    Check if a string is an IPv6 address, and whether is a local address
     IP may include a port number, e.g. `[::1]:80`
     If port is not specified, IP can be specified without brackets, e.g. ::1
     """
@@ -240,17 +240,17 @@ def is_local_ipv6(ip):
         ip = ip.split("]")[0][1:]
     try:
         ip_obj = ipaddress.IPv6Address(ip)
-        return ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_private
+        return not local or ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_private
     except ValueError:
         return False
 
 
-def is_local_ipv4(addr):
-    """Check if an IPv4 address is a local address"""
+def is_ipv4(addr, local):
+    """Check if a string is an IPv4 address, and whether it is a local address"""
     ip = addr.rsplit(":", 1)[0]
     try:
         ip_obj = ipaddress.IPv4Address(ip)
-        return ip_obj.is_loopback or ip_obj.is_private
+        return not local or ip_obj.is_loopback or ip_obj.is_private
     except ValueError:
         return False
 
@@ -281,9 +281,9 @@ class ResolverDirective(Directive):
         for addr in self.addresses:
             if any(addr.endswith(suffix) for suffix in local_suffixes):
                 continue
-            if "." in addr and is_local_ipv4(addr):
+            if "." in addr and is_ipv4(addr, True):
                 continue
-            if ":" in addr and is_local_ipv6(addr):
+            if ":" in addr and is_ipv6(addr, True):
                 continue
             external_nameservers.append(addr)
         return external_nameservers
