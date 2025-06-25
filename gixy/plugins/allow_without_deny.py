@@ -4,8 +4,8 @@ from gixy.plugins.plugin import Plugin
 
 class allow_without_deny(Plugin):
     """
-    Bad example: add_header Content-Type text/plain;
-    Good example: default_type text/plain;
+    Bad example: allow 127.0.0.1; deny all;
+    Good example: allow 127.0.0.1;
     """
     summary = 'Found allow directive(s) without deny in the same context.'
     severity = gixy.severity.HIGH

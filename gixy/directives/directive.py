@@ -49,13 +49,32 @@ class Directive:
         """Get all variables provided by this directive"""
         raise NotImplementedError()
 
-    def find_directives_in_scope(self, name):
-        """Find directives in the current scope"""
+    def find_declarative_directives_in_scope(self, name, ancestors):
+        """Find declarative directives in the current scope, optionally from all ancestors too"""
+        node = self
+        parent = self.parent
+        while parent:
+            for child in parent.children:
+                if child is node:
+                    break
+
+                if child.name == name:
+                    yield child
+
+                if child.is_block and not child.self_context:
+                    yield from child.find_recursive(name)
+
+            if not ancestors:
+                break
+
+            node, parent = parent, parent.parent
+
+    def find_imperative_directives_in_scope(self, name, ancestors):
+        """Find imperative directives in the current scope, optionally from all ancestors too"""
         for parent in self.parents:
-            directive = parent.some(name, flat=False)
-            if directive:
-                yield directive
-        return None
+            yield from parent.find(name, flat=False)
+            if not ancestors:
+                break
 
     def find_single_directive_in_scope(self, name):
         """Find a single directive in the current scope"""
@@ -230,9 +249,9 @@ class AliasDirective(Directive):
         self.path = args[0]
 
 
-def is_local_ipv6(ip):
+def is_ipv6(ip, local):
     """
-    Check if an IPv6 address is a local address
+    Check if a string is an IPv6 address, and whether is a local address
     IP may include a port number, e.g. `[::1]:80`
     If port is not specified, IP can be specified without brackets, e.g. ::1
     """
@@ -240,17 +259,17 @@ def is_local_ipv6(ip):
         ip = ip.split("]")[0][1:]
     try:
         ip_obj = ipaddress.IPv6Address(ip)
-        return ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_private
+        return not local or ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_private
     except ValueError:
         return False
 
 
-def is_local_ipv4(addr):
-    """Check if an IPv4 address is a local address"""
+def is_ipv4(addr, local):
+    """Check if a string is an IPv4 address, and whether it is a local address"""
     ip = addr.rsplit(":", 1)[0]
     try:
         ip_obj = ipaddress.IPv4Address(ip)
-        return ip_obj.is_loopback or ip_obj.is_private
+        return not local or ip_obj.is_loopback or ip_obj.is_private
     except ValueError:
         return False
 
@@ -281,9 +300,9 @@ class ResolverDirective(Directive):
         for addr in self.addresses:
             if any(addr.endswith(suffix) for suffix in local_suffixes):
                 continue
-            if "." in addr and is_local_ipv4(addr):
+            if "." in addr and is_ipv4(addr, True):
                 continue
-            if ":" in addr and is_local_ipv6(addr):
+            if ":" in addr and is_ipv6(addr, True):
                 continue
             external_nameservers.append(addr)
         return external_nameservers
