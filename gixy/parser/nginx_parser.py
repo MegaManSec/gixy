@@ -145,7 +145,7 @@ class NginxParser(object):
             self.parse_file(file_path, parent)
 
         if not exists:
-            self.self_log_file_warning(path)
+            self.log_file_warning(path)
 
     def _resolve_dump_include(self, pattern, parent):
         path = os.path.join(self.cwd, pattern)
