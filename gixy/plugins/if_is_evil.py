@@ -49,6 +49,7 @@ class if_is_evil(Plugin):
                 reason = 'Directive "{directive}" is not safe to use in "if in location" context'.format(directive=directive.name)
                 if directive.name == 'rewrite':
                     reason = 'Directive "rewrite" is only safe to use in "if in location" context when "last" ' \
+                    'argument is used'
                 self.add_issue(
                     severity=gixy.severity.HIGH,
                     directive=[directive, parent],
