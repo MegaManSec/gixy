@@ -19,6 +19,15 @@ class try_files_is_evil_too(Plugin):
     directives = ["try_files"]
 
     def audit(self, directive):
+        found_real_try_files = False
+        for arg in directive.args:
+            if arg and not arg.startswith('@'):
+                found_real_try_files = True
+                break
+
+        if not found_real_try_files:
+            return
+
         # search for open_file_cache ...; on the same or higher level
         open_file_cache = directive.find_single_directive_in_scope("open_file_cache")
         if not open_file_cache or open_file_cache.args[0] == "off":
