@@ -9,7 +9,7 @@ class allow_without_deny(Plugin):
     """
     summary = 'Found allow directive(s) without deny in the same context.'
     severity = gixy.severity.HIGH
-    description = 'The "allow" directives should be typically accompanied by "deny all;" directive'
+    description = 'The "allow" directives should be typically accompanied by "deny all;" directive.'
     help_url = 'https://github.com/dvershinin/gixy/blob/master/docs/en/plugins/allow_without_deny.md'
     directives = ['allow']
 
