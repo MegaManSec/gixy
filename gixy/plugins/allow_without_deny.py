@@ -30,13 +30,6 @@ class allow_without_deny(Plugin):
                     return
                 break
 
-        while ctx:
-            if ctx.name in ['http', 'server', 'location', 'limit_except']: # Traverse upwards to the first-seen block
-                if ctx.some('deny', True): # Find any 'deny' in the block (flattening)
-                    return
-                break
-            ctx = getattr(ctx, 'parent', None)
-
         reason = 'You probably want "deny all;" after all the "allow" directives'
         self.add_issue(
             directive=directive,
