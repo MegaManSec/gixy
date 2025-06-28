@@ -71,10 +71,13 @@ class Directive:
 
     def find_imperative_directives_in_scope(self, name, ancestors):
         """Find imperative directives in the current scope, optionally from all ancestors too"""
-        for parent in self.parents:
-            yield from parent.find(name, flat=False)
-            if not ancestors:
-                break
+        scope = self.parent
+        if ancestors:
+            while scope and scope.parent:
+                scope = scope.parent
+
+        if scope:
+            yield from scope.find_recursive(name)
 
     def find_single_directive_in_scope(self, name):
         """Find a single directive in the current scope"""

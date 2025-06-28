@@ -5,8 +5,15 @@ from gixy.plugins.plugin import Plugin
 class if_is_evil(Plugin):
     """
     Insecure example:
-        location /files {
-            alias /home/;
+        location /only-one-if {
+            set $true 1;
+            if ($true) {
+                add_header X-First 1; # Bug: not in the response
+            }
+            if ($true) {
+                add_header X-Second 2;
+            }
+            return 204;
         }
     """
     summary = 'If is Evil... when used in location context.'
@@ -18,9 +25,15 @@ class if_is_evil(Plugin):
     directives = []
 
     def audit(self, directive):
-        parent = directive.parent
-        # if immediate parent is not "if" break out
-        if not parent or parent.name != 'if':
+        found_if = False
+        parent = None
+        for parent in directive.parents:
+            if parent.name == 'if':
+                found_if = True
+                break
+
+        # if parent is not "if" break out
+        if not found_if:
             return
 
         # "rewrite ... last" is safe
@@ -31,17 +44,14 @@ class if_is_evil(Plugin):
         if directive.name == 'return':
             return
 
-        grandparent = parent.parent
-
-        if grandparent and grandparent.name == 'location':
-            reason = 'Directive "{directive}" is not safe to use in "if in location" context'.format(directive=directive.name)
-            if directive.name == 'rewrite':
-                reason = 'Directive "rewrite" is only safe to use in "if in location" context when "last" ' \
-                         'argument is used'
-            self.add_issue(
-                severity=gixy.severity.HIGH,
-                directive=[directive, parent],
-                reason=reason
-            )
-
-
+        for grandparent in parent.parents:
+            if grandparent and grandparent.name == 'location':
+                reason = 'Directive "{directive}" is not safe to use in "if in location" context'.format(directive=directive.name)
+                if directive.name == 'rewrite':
+                    reason = 'Directive "rewrite" is only safe to use in "if in location" context when "last" ' \
+                self.add_issue(
+                    severity=gixy.severity.HIGH,
+                    directive=[directive, parent],
+                    reason=reason
+                )
+                break

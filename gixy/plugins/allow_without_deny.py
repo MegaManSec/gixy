@@ -17,18 +17,28 @@ class allow_without_deny(Plugin):
         parent = directive.parent
         if not parent:
             return
+
         if directive.args == ['all']:
             # example, "allow all" in a nested location which allows access to otherwise forbidden parent location
             return
-        deny_found = False
-        for child in parent.children:
-            if child.name == 'deny':
-                deny_found = True
-        if not deny_found:
-            reason = 'You probably want "deny all;" after all the "allow" directives'
-            self.add_issue(
-                directive=directive,
-                reason=reason
-            )
 
 
+        for ctx in directive.parents:
+            if ctx.name in {'http', 'server', 'location', 'limit_except'}:
+                # Any ‘deny’ inside this block (flattened)
+                if ctx.some('deny', True):
+                    return
+                break
+
+        while ctx:
+            if ctx.name in ['http', 'server', 'location', 'limit_except']: # Traverse upwards to the first-seen block
+                if ctx.some('deny', True): # Find any 'deny' in the block (flattening)
+                    return
+                break
+            ctx = getattr(ctx, 'parent', None)
+
+        reason = 'You probably want "deny all;" after all the "allow" directives'
+        self.add_issue(
+            directive=directive,
+            reason=reason
+        )
