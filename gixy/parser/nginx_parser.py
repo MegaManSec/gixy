@@ -158,16 +158,22 @@ class NginxParser(object):
             self.log_file_warning(path)
 
     def _resolve_dump_include(self, pattern, parent):
-        path = os.path.join(self.cwd, pattern)
-        founded = False
+        path   = os.path.join(self.cwd, pattern)
+        found  = False
         for file_path, parsed in self.configs.items():
-            if fnmatch.fnmatch(file_path, path):
-                founded = True
-                include = block.IncludeBlock("include", [file_path])
-                parent.append(include)
-                self.parse_block(parsed, include)
+            if not fnmatch.fnmatch(file_path, path):
+                continue
+            found = True
 
-        if not founded:
+            old_stack, old_cwd = self._path_stack, self.cwd
+            self._path_stack   = file_path
+            self.cwd           = os.path.dirname(file_path)
+
+            self.parse_block(parsed, parent)
+
+            self._path_stack, self.cwd = old_stack, old_cwd
+
+        if not found:
             self.log_file_warning(path)
 
     def _prepare_dump(self, parsed_block):
