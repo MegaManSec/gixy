@@ -24,7 +24,7 @@ class missing_resolver(Plugin):
         self.parse_uri_re = re.compile(r'^(?P<scheme>[a-z][a-z0-9+.-]*://)?(?P<host>\[[0-9a-fA-F:.]+\]|[^/?#:]+)(?::(?P<port>[0-9]+))?')
         self.local_suffixes = (
             ".intranet", ".internal", ".private", ".corp", ".home",
-            ".lan", ".local", ".localhost"
+            ".lan", ".local", ".localhost", ".svc"
         )
 
     def audit(self, directive):
