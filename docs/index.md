@@ -48,18 +48,11 @@ You can find things that Gixy is learning to detect at [Issues labeled with "new
 
 # Installation
 
-## CentOS/RHEL and other RPM-based systems
+
+GixyNG is distributed on [PyPI](https://pypi.python.org/pypi/gixyng). The best way to install it is with pip:
 
 ```bash
-yum -y install https://extras.getpagespeed.com/release-latest.rpm
-yum -y install gixy
-```
-### Other systems
-
-Gixy is distributed on [PyPI](https://pypi.python.org/pypi/gixy-ng). The best way to install it is with pip:
-
-```bash
-pip install gixy-ng
+pip install gixyng
 ```
 
 Run Gixy and check results:
