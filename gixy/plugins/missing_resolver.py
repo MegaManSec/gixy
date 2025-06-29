@@ -76,7 +76,7 @@ class missing_resolver(Plugin):
                         found_bad_server = True
                         upstream_directives.append(child)
 
-                        if not parsed_host.endswith(tuple(self.local_suffixes)):
+                        if not parsed_upstream_host.endswith(tuple(self.local_suffixes)):
                             severity = gixy.severity.MEDIUM
 
         if not found_upstream and '$' in directive.args[0]: # https://host/$1 is OK, as long as 'host' is not an 'upstream'.
