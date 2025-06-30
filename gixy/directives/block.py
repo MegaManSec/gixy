@@ -181,7 +181,7 @@ class IfBlock(Block):
         boundary = None
         compiled_script = compile_script(self.variable)
         if len(compiled_script) == 1:
-            boundary = compiled_script[0].value
+            boundary = compiled_script[0].regexp
 
         regexp = Regexp(self.value, case_sensitive=self.operand in ["~", '!~'])
         result = []
