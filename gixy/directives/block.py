@@ -183,7 +183,7 @@ class IfBlock(Block):
         if len(compiled_script) == 1:
             boundary = compiled_script[0].regexp
 
-        regexp = Regexp(self.value, case_sensitive=self.operand in ["~", '!~'])
+        regexp = Regexp(self.value, case_sensitive=self.operand in {"~", '!~'})
         result = []
         for name, group in regexp.groups.items():
             result.append(
