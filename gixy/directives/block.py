@@ -171,7 +171,7 @@ class IfBlock(Block):
 
     @property
     def is_regex(self):
-        return self.operand and self.operand in ("~", "~*", '!~', '!~*')
+        return self.operand and self.operand in {"~", "~*", "!~", "!~*"}
 
     @cached_property
     def variables(self):
