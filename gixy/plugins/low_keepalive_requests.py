@@ -17,7 +17,13 @@ class low_keepalive_requests(Plugin):
     directives = ["keepalive_requests"]
 
     def audit(self, directive):
-        if int(directive.args[0]) < 1000:
+        if not getattr(directive, 'args', None):
+            return
+        try:
+            value = int(directive.args[0])
+        except (ValueError, TypeError, IndexError):
+            return
+        if value < 1000:
             self.add_issue(
                 severity=self.severity,
                 directive=[directive],
