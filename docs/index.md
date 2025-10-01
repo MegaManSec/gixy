@@ -207,4 +207,4 @@ Contributions to Gixy are always welcome! You can help us in different ways:
 
 Code guidelines:
   * Python code style should follow [pep8](https://www.python.org/dev/peps/pep-0008/) standards whenever possible;
-  * Pull requests with new plugins must have unit tests for it.
+  * Pull requests with new plugins must have unit tests for them.
