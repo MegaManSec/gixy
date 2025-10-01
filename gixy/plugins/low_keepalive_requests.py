@@ -17,6 +17,8 @@ class low_keepalive_requests(Plugin):
     directives = ["keepalive_requests"]
 
     def audit(self, directive):
+        if not directive.args:
+            return
         if not getattr(directive, 'args', None):
             return
         try:
