@@ -7,8 +7,8 @@ The most common errors with this configuration are:
   - regex errors;
   - allow third-party origins.
 
- > Notice: by default, Gixy doesn't check regexes for third-party origins matching.
- > You can pass a list of trusted domains by using the option `--origins-domains example.com,foo.bar`
+> Notice: by default, Gixy doesn't check regexes for third-party origins matching.
+> You can pass a list of trusted domains by using the option `--origins-domains example.com,foo.bar`. When enabled, Gixy recognizes origins by registrable domain (via Public Suffix List) and will flag regexes that allow off-domain values.
 
 ## How can I find it?
 "Eazy"-breezy:
@@ -30,4 +30,14 @@ TODO(buglloc): Regex Ninja?
 
   - fix your regex or toss it away :)
   - if you use regex validation for `Referer` request header, then, possibly (not 100%), you could use [ngx_http_referer_module](http://nginx.org/en/docs/http/ngx_http_referer_module.htmll);
-  - sometimes it is much better to use the `map` directive without any regex at all.
+  - often it's better to avoid regex entirely for `Origin` and use a `map` allowlist:
+
+```nginx
+map $http_origin $allow_origin {
+    ~^https://([A-Za-z0-9\-]+\.)?example\.com(?::[0-9]{1,5})?$ $http_origin;
+    default "";
+}
+add_header Access-Control-Allow-Origin $allow_origin always;
+```
+
+Gixy now understands this pattern and will analyze regex map keys feeding `Access-Control-Allow-Origin`.
