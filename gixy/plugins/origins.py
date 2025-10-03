@@ -96,8 +96,13 @@ class origins(Plugin):
             return True
 
         if self.psl is None:
-            # Fallback: exact match only when PSL is unavailable
-            return False
+            # Fallback without PSL: consider origins same if they share the same last two labels
+            def last_two(host):
+                parts = host.strip('.').split('.')
+                if len(parts) < 2:
+                    return None
+                return '.'.join(parts[-2:])
+            return last_two(i) is not None and last_two(i) == last_two(j)
         return self.psl.privatesuffix(i.strip('.')) == self.psl.privatesuffix(j.strip('.')) != None
 
     def parse_url(self, url):
