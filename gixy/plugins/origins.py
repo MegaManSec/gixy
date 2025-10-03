@@ -5,9 +5,12 @@ from gixy.core.regexp import Regexp
 from gixy.directives.block import MapBlock
 from gixy.directives.directive import MapDirective, AddHeaderDirective
 from urllib.parse import urlparse
-from publicsuffixlist import PublicSuffixList
-
-_PSL = PublicSuffixList()
+try:
+    from publicsuffixlist import PublicSuffixList
+    _PSL = PublicSuffixList()
+except Exception:  # pragma: no cover - optional dependency
+    PublicSuffixList = None
+    _PSL = None
 
 class origins(Plugin):
     r"""
@@ -92,6 +95,9 @@ class origins(Plugin):
         if i == j:
             return True
 
+        if self.psl is None:
+            # Fallback: exact match only when PSL is unavailable
+            return False
         return self.psl.privatesuffix(i.strip('.')) == self.psl.privatesuffix(j.strip('.')) != None
 
     def parse_url(self, url):
