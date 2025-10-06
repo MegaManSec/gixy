@@ -34,12 +34,22 @@ class PluginsManager(object):
         severity = self.config.severity if self.config else None
         for plugin_cls in Plugin.__subclasses__():
             name = plugin_cls.__name__
-            if include and name not in include:
-                # Skip not needed plugins
-                continue
-            if exclude and name in exclude:
-                # Skipped plugins
-                continue
+            # Skip not needed plugins if include list is specified
+            if include is not None:
+                try:
+                    if name not in include:
+                        continue
+                except TypeError:
+                    # include doesn't support membership test, skip this check
+                    pass
+            # Skip plugins that are explicitly excluded
+            if exclude is not None:
+                try:
+                    if name in exclude:
+                        continue
+                except TypeError:
+                    # exclude doesn't support membership test, skip this check
+                    pass
             if severity and not gixy.severity.is_acceptable(
                 plugin_cls.severity, severity
             ):
@@ -70,6 +80,23 @@ class PluginsManager(object):
             if plugin.directives and directive.name not in plugin.directives:
                 continue
             plugin.audit(directive)
+
+    def post_audit(self, root):
+        """Call post_audit on plugins that support full config analysis when full config is detected."""
+        if not self._is_full_config(root):
+            return
+            
+        for plugin in self.plugins:
+            if plugin.supports_full_config:
+                plugin.post_audit(root)
+
+    def _is_full_config(self, root):
+        """Detect if this is a full nginx config by checking for http block."""
+        # Check if root has an http block child
+        for child in root.children:
+            if child.name == 'http':
+                return True
+        return False
 
     def issues(self):
         result = []

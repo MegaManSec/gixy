@@ -3,7 +3,8 @@
 from gixy.core.variable import Variable
 from gixy.core.regexp import Regexp
 
-
+import ipaddress
+ 
 def get_overrides():
     """Get a list of all directives that override the default behavior"""
     result = {}
@@ -64,6 +65,8 @@ class Directive:
                 return directive
         return None
 
+
+
     def __str__(self):
         return f"{self.name} {' '.join(self.args)};"
 
@@ -91,7 +94,7 @@ class MoreSetHeadersDirective(Directive):
     nginx_name = "more_set_headers"
 
     def get_headers(self):
-        # See headers more documentation: https://github.com/openresty/headers-more-nginx-module#description
+        # See headers more documentation: https://nginx-extras.getpagespeed.com/modules/headers-more/#description
         result = {}
         skip_next = False
         for arg in self.args:
@@ -130,7 +133,7 @@ class SetDirective(Directive):
 
     def __init__(self, name, args):
         super(SetDirective, self).__init__(name, args)
-        self.variable = args[0].strip("$")
+        self.variable = args[0].lstrip("$")
         self.value = args[1]
 
     @property
@@ -144,7 +147,7 @@ class AuthRequestSetDirective(Directive):
 
     def __init__(self, name, args):
         super().__init__(name, args)
-        self.variable = args[0].strip("$")
+        self.variable = args[0].lstrip("$")
         self.value = args[1]
 
     @property
@@ -160,7 +163,7 @@ class PerlSetDirective(Directive):
 
     def __init__(self, name, args):
         super().__init__(name, args)
-        self.variable = args[0].strip("$")
+        self.variable = args[0].lstrip("$")
         self.value = args[1]
 
     @property
@@ -174,7 +177,7 @@ class SetByLuaDirective(Directive):
 
     def __init__(self, name, args):
         super().__init__(name, args)
-        self.variable = args[0].strip("$")
+        self.variable = args[0].lstrip("$")
         self.value = args[1]
 
     @property
@@ -235,36 +238,23 @@ def is_local_ipv6(ip):
     IP may include a port number, e.g. `[::1]:80`
     If port is not specified, IP can be specified without brackets, e.g. ::1
     """
-    # Remove brackets if present
     if ip.startswith("[") and "]" in ip:
         ip = ip.split("]")[0][1:]
-
-    # Exclude loopback address ([::1])
-    if ip == "::1":
-        return True
-    # Exclude link-local addresses (fe80::/10)
-    if ip.startswith("fe80:"):
-        return True
-    # Exclude unique local addresses (fc00::/7)
-    if ip.startswith("fc") or ip.startswith("fd"):
-        return True
-    return False
+    try:
+        ip_obj = ipaddress.IPv6Address(ip)
+        return ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_private
+    except ValueError:
+        return False
 
 
 def is_local_ipv4(addr):
-    """Check if an IPv4 address is a local address"""
+    """Check if an IPv4 address is a local address (loopback/private/link-local)."""
     ip = addr.rsplit(":", 1)[0]
-    # Exclude loopback addresses (127.0.0.0/8)
-    if ip.startswith("127."):
-        return True
-    # Exclude private addresses (10.x.x.x, 172.16.x.x - 172.31.x.x, 192.168.x.x)
-    if ip.startswith("10.") or ip.startswith("192.168."):
-        return True
-    if ip.startswith("172."):
-        second_octet = int(ip.split(".")[1])
-        if 16 <= second_octet <= 31:
-            return True
-    return False
+    try:
+        ip_obj = ipaddress.IPv4Address(ip)
+        return ip_obj.is_loopback or ip_obj.is_private or ip_obj.is_link_local
+    except ValueError:
+        return False
 
 
 class ResolverDirective(Directive):
@@ -286,13 +276,81 @@ class ResolverDirective(Directive):
     def get_external_nameservers(self):
         """Get a list of external nameservers used by the resolver directive"""
         external_nameservers = []
+        local_suffixes = (
+            ".intranet", ".internal", ".private", ".corp", ".home",
+            ".lan", ".local", ".localhost"
+        )
         for addr in self.addresses:
-            # Check for IPv4 addresses
+            if any(addr.endswith(suffix) for suffix in local_suffixes):
+                continue
             if "." in addr and is_local_ipv4(addr):
                 continue
-            # Check for IPv6 addresses
             if ":" in addr and is_local_ipv6(addr):
                 continue
-
             external_nameservers.append(addr)
         return external_nameservers
+
+class MapDirective(Directive):
+    """
+    map $source $destination {
+        default value; <- this part
+        key     value; <- this part
+    }
+
+    geo [$remote_addr] $destination {
+      default        ZZ; <-- this part.
+      include        conf/geo.conf; <-- this part.
+      delete         127.0.0.0/16; <-- this part.
+      proxy          192.168.100.0/24; <-- this part.
+      proxy          2001:0db8::/32; <-- this part.
+      key            value; <-- this part.
+    }
+    """
+
+    nginx_name = "map" # XXX: Also used for "geo". Could also work for "charset_map"
+    provide_variables = True
+
+    def __init__(self, source, destination):
+        super().__init__(source, destination)
+        self.src_val = source
+        self.dest_val = destination[0] if destination and len(destination) == 1 else None
+        self.regex = None
+
+        if self.is_regex:
+            if self.src_val.startswith('~*'):
+                pattern = self.src_val[2:]
+                cs = False
+            else:
+                pattern = self.src_val[1:]
+                cs = True
+            self.regex = Regexp(pattern, case_sensitive=cs)
+
+    def __str__(self):
+        map_str = self.src_val
+        if self.dest_val:
+            map_str += f" {self.dest_val}"
+        map_str += ";"
+        return map_str
+
+    @property
+    def is_regex(self):
+        return self.src_val.startswith("~")
+
+    @property
+    def variables(self):
+        if not self.regex:
+            return []
+
+        ancestor = self.parent
+        while ancestor is not None and ancestor.nginx_name != 'map': # XXX: Better to check isinstance(ancestor, MapBlock) but circular import..
+            ancestor = getattr(ancestor, 'parent', None)
+
+        if ancestor is None: # This happens for "geo" directives, which is ok because geo directive does not provide variables.
+            return []
+
+        result = []
+        for name, group in self.regex.groups.items():
+            result.append(
+                Variable(name=name, value=group, provider=self, boundary=None, ctx=self.src_val)
+            )
+        return result

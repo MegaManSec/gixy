@@ -94,6 +94,7 @@ class GixyHelpFormatter(HelpFormatter):
                 "\t" + plugin.__name__ for plugin in manager.plugins_classes
             )
             help_message = f"{help_message}\n\navailable plugins:\n{plugins}\n"
+        help_message = f"{help_message}\n\nGet curated NGINX RPMs (NGINX Extras by GetPageSpeed): https://nginx-extras.getpagespeed.com/"
         return help_message
 
 
@@ -135,7 +136,7 @@ class ArgsParser(ArgumentParser):
                         config_file_keys
                         and not action.is_positional_arg
                         and already_on_command_line(
-                            existing_command_line_args, action.option_strings
+                            existing_command_line_args, action.option_strings, self.prefix_chars
                         )
                     ):
                         value = getattr(parsed_namespace, action.dest, None)

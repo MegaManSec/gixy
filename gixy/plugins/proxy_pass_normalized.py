@@ -17,7 +17,7 @@ class proxy_pass_normalized(Plugin):
     summary = "Detect path after host in proxy_pass (potential URL decoding issue)"
     severity = gixy.severity.MEDIUM
     description = "A path (beginning with a slash) after the host in proxy_pass leads to the path being decoded and normalized before proxying downstream, leading to unexpected behavior related to encoded slashes like %2F..%2F. Likewise, the usage of 'rewrite ^ $request_uri;' without using '$1' or '$uri' (or another captured group) in the path of proxy_pass leads to double-encoding of paths."
-    help_url = "https://joshua.hu/proxy-pass-nginx-decoding-normalizing-url-path-dangerous#nginx-proxy_pass"
+    help_url = "https://gixy.getpagespeed.com/en/plugins/proxy_pass_normalized/"
     directives = ["proxy_pass"]
 
     def __init__(self, config):
@@ -25,15 +25,21 @@ class proxy_pass_normalized(Plugin):
         self.num_pattern = re.compile(r"\$\d+")
 
     def audit(self, directive):
-        proxy_pass_args = directive.args
         rewrite_fail = False
         parent = directive.parent
 
-        if not proxy_pass_args:
+        if not parent:
             return
 
-        if not parent or parent.name != 'location' or parent.modifier == '=':
-            return
+        if parent.name == 'location':
+            if parent.modifier == '=':
+                return
+        elif parent.name in ['limit_except', 'if']:
+            grandparent = parent.parent
+            if not grandparent or grandparent.name != 'location' or grandparent.modifier == '=':
+                return
+
+        proxy_pass_args = directive.args
 
         if proxy_pass_args[0].startswith("$") and '/' not in proxy_pass_args[0]:
             # If proxy pass destination is defined by only a variable, it is not possible to check for path normalization issues
