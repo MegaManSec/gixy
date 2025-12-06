@@ -36,11 +36,16 @@ class add_header_redefinition(Plugin):
             self.interesting_headers = set()
         # Define secure headers that should escalate severity
         self.secure_headers = [
-            'x-frame-options',
-            'x-content-type-options',
-            'x-xss-protection',
             'content-security-policy',
-            'cache-control'
+            'cross-origin-embedder-policy',
+            'cross-origin-opener-policy',
+            'cross-origin-resource-policy',
+            'permissions-policy',
+            'referrer-policy',
+            'strict-transport-security',
+            'x-content-type-options',
+            'x-frame-options',
+            'x-xss-protection',
         ]
 
     def audit(self, directive):
@@ -80,7 +85,7 @@ class add_header_redefinition(Plugin):
         # Set severity based on whether a secure header was dropped
         issue_severity = gixy.severity.MEDIUM if is_secure_header_dropped else self.severity
 
-        reason = 'Parent headers "{headers}" was dropped in current level'.format(headers='", "'.join(diff))
+        reason = 'Parent headers "{headers}" was dropped in current level'.format(headers='", "'.join(sorted(diff)))
         self.add_issue(directive=directives, reason=reason, severity=issue_severity)
 
 
